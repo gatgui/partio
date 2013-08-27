@@ -128,9 +128,8 @@ global proc shelf_Partio4Maya () {
         -style "iconOnly"
         -marginWidth 1
         -marginHeight 1
-        -command "catch(`loadPlugin \"partio4Maya\"`);\npartioImport -p \"partioImportShape\" -atr \"pointColor\" \"rgbPP\" \"/your/cache/path/goes/here.pts\";"
+        -command "catch(`loadPlugin \"partio4Maya\"`);\nsource \"partioUtils.mel\";\nattachPartioCache();"
         -sourceType "mel"
         -commandRepeatable 1
     ;
-
 }
