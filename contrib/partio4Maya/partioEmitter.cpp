@@ -183,7 +183,7 @@ MStatus partioEmitter::initialize()
         eAttr.addField(formatExtMap[i].toUpperCase(),	i);
     }
 
-    eAttr.setDefault(4); // PDC
+    eAttr.setDefault(Partio::readFormatIndex("pdc")); // PDC
     eAttr.setChannelBox(true);
     eAttr.setKeyable(false);
 

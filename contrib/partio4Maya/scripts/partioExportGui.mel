@@ -65,23 +65,19 @@ global proc partioExportGui  ()
     string $dynExportButton    = `button -w 200 -h 35 -ebg true -bgc 0 .25  0 -l "partioExport" `;
 
 	string $partioExportFormatOptionMenu = `optionMenuGrp -l "PartioFormat" partioExportFormat`;
-	// TODO: make this call a function from  the plugin to return a proper list of formats it currently supports for writing
-	menuItem -label "BGEO";
-    menuItem -label "GEO";
-    menuItem -label "PDA";
-    menuItem -label "PDB";
-    menuItem -label "PDC";
-    menuItem -label "BIN";
-    menuItem -label "PRT";
-    menuItem -label "PTC";
-	menuItem -label "PTS";
-	menuItem -label "XYZ";
-	menuItem -label "PCD";
-	menuItem -label "ICEcache";
-	menuItem -label "RIB";
-//	menuItem -label "ASS";
+    string $fmt, $fmts[] = `partioExport -query -format`;
+    int $default = 0, $ifmt = 0;
+    for ($fmt in $fmts)
+    {
+        if ($fmt == "PDC")
+        {
+            $default = $ifmt;
+        }
+        menuItem -label `toupper $fmt`;
+        $ifmt++;
+    }
 
-    optionMenuGrp -e -sl 5 $partioExportFormatOptionMenu;
+    optionMenuGrp -e -sl 11 $partioExportFormatOptionMenu;
 
     string $exportPerFrameCheckbox = `checkBoxGrp -numberOfCheckBoxes 1  -label1 "Per/Frame"  -v1  0`;
 
