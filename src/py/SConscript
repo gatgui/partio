@@ -39,18 +39,17 @@ python_mod = 'lib/python%s/site-packages' % python_ver
 
 Import('env variant_build_abs variant_install_abs')
 
-envpy=env.Clone(CPPPATH=[variant_build_abs+"/include"]
-              ,LIBPATH="%s/lib"%variant_build_abs
-              ,LIBS=["partio"])
+envpy = env.Clone(CPPPATH=[variant_build_abs + "/include"],
+	              LIBPATH="%s/lib" % variant_build_abs,
+	              LIBS=["partio"])
 
 
-pythonDir="/usr"
+pythonDir = "/usr"
 #pythonDir=os.environ["RP_python2"]
 
 envpy.Append(CXXFLAGS=["-Wno-format"])
-envpy.Append(CPPPATH=[pythonDir+"/include/python%s" % python_ver
-                      ],
-             LIBPATH=["%s/lib"%variant_build_abs],
+envpy.Append(CPPPATH=[pythonDir + "/include/python%s" % python_ver],
+             LIBPATH=["%s/lib" % variant_build_abs],
              LIBS=["partio"])
 
 envpy.Append(SWIGFLAGS=['-c++','-python','-Wall'])
@@ -58,14 +57,14 @@ envpy.Append(SWIGFLAGS=['-c++','-python','-Wall'])
 
 
 if env["mac"]:
-    envpy.Append(LINKFLAGS=["-framework","python"],LIBS=["z","partio"])
-lib=envpy.SharedLibrary("partio",["partio.i"],LIBS=["z","partio"])
+    envpy.Append(LINKFLAGS=["-framework","python"], LIBS=["z","partio"])
+lib = envpy.SharedLibrary("partio", ["partio.i"], LIBS=["z","partio"])
 #print lib
-dp1=envpy.InstallAs(variant_install_abs+"/%s/_partio.so" % python_mod,lib)
-dp2=envpy.InstallAs(variant_install_abs+"/%s/partio.py" % python_mod,"partio.py")
-envpy.Depends(dp1,dp2)
+dp1 = envpy.InstallAs(variant_install_abs + "/%s/_partio.so" % python_mod,lib)
+dp2 = envpy.InstallAs(variant_install_abs + "/%s/partio.py" % python_mod, "partio.py")
+envpy.Depends(dp1, dp2)
 
-envpy.Alias('python', [dp1,dp2])
+envpy.Alias('python', [dp1, dp2])
 
 # Find all .cpp's and make them into programs with same names as cpp
 #filter={"partview.cpp":0}  # don't compile this, it requires better env

@@ -74,7 +74,7 @@ struct ArrayAccessor
       {
          partData->addParticles(mayaData.length());
       }
-      else if (partData->numParticles() != mayaData.length())
+      else if (partData->numParticles() != int(mayaData.length()))
       {
 #ifdef _DEBUG
          MGlobal::displayInfo("ArrayAccessor::Write: Particle count mismatch");
@@ -654,7 +654,7 @@ MStatus PartioCache::readDoubleArray(MDoubleArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readDoubleArray");
 #endif
-   if (size != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
+   if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
       // can be the count attribute
       if (mRAttrIdx == mRData->numAttributes() && size == 1)
@@ -679,7 +679,7 @@ MStatus PartioCache::readFloatArray(MFloatArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readFloatArray");
 #endif
-   if (size != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
+   if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
       MGlobal::displayWarning("PartioCache readFloatArray failed");
@@ -694,7 +694,7 @@ MStatus PartioCache::readIntArray(MIntArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readIntArray");
 #endif
-   if (size != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
+   if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
       MGlobal::displayWarning("PartioCache readIntArray failed");
@@ -709,7 +709,7 @@ MStatus PartioCache::readDoubleVectorArray(MVectorArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readDoubleVectorArray");
 #endif
-   if (size != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
+   if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
       MGlobal::displayWarning("PartioCache readDoubleVectorArray failed");
@@ -724,7 +724,7 @@ MStatus PartioCache::readFloatVectorArray(MFloatVectorArray &array, unsigned siz
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readFloatVectorArray");
 #endif
-   if (size != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
+   if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
       MGlobal::displayWarning("PartioCache readFloatVectorArray failed");

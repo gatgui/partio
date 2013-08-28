@@ -60,7 +60,7 @@ if env["mac"]==True:
     #env.Append(LINKFLAGS=["-m32"])
 
 if env["TYPE"]=="optimize":
-    env.Append(CXXFLAGS="-fPIC -DNDEBUG -O3 -fno-strict-aliasing -Wall -Werror -Wstrict-aliasing=0  -mfpmath=sse -msse3".split())
+    env.Append(CXXFLAGS="-fPIC -DNDEBUG -O3 -fno-strict-aliasing -Wall -Werror -Wstrict-aliasing=0 -mfpmath=sse -msse3".split())
 if env["TYPE"]=="profile":
     env.Append(CXXFLAGS="-fPIC -fno-strict-aliasing -DNDEBUG -g -fno-omit-frame-pointer -O3 -Wall -Werror -Wstrict-aliasing=0  -mfpmath=sse -msse3".split())
 elif env["TYPE"]=="debug":
@@ -75,9 +75,9 @@ def GetInstallPath():
 
 Export("env variant_build variant_build_abs variant_install_abs GetInstallPath")
 
-env.SConscript(variant_build+"/src/lib/SConscript")
-env.SConscript(variant_build+"/src/tools/SConscript")
-env.SConscript(variant_build+"/src/tests/SConscript")
-env.SConscript(variant_build+"/src/doc/SConscript")
-env.SConscript(variant_build+"/src/py/SConscript")
-
+env.SConscript(variant_build + "/src/lib/SConscript")
+env.SConscript(variant_build + "/src/tools/SConscript")
+env.SConscript(variant_build + "/src/tests/SConscript")
+env.SConscript(variant_build + "/src/doc/SConscript")
+env.SConscript(variant_build + "/src/py/SConscript")
+env.SConscript(variant_build + "/contrib/partio4Maya/SConscript")

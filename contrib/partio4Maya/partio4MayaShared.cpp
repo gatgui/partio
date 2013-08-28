@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 
 #include "partio4MayaShared.h"
+#include "iconArrays.h"
 
 #define TABLE_SIZE 256
 
@@ -230,7 +231,7 @@ void partio4Maya::updateFileName (MString cacheFile, MString cacheDir,
     cachePadding = fileParts[4].length();
     MString origFrameString = fileParts[5];
 
-    bool tempFix = false;
+    //bool tempFix = false;
 
     int cacheFrame;
     MString  newCacheFile;

@@ -29,7 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #include "partioVisualizer.h"
 
-static MGLFunctionTable *gGLFT = NULL;
+//static MGLFunctionTable *gGLFT = NULL;
 
 
 // id is registered with autodesk no need to change
@@ -93,25 +93,24 @@ partioVizReaderCache::partioVizReaderCache():
 {
 }
 
-
 /// CREATOR
 partioVisualizer::partioVisualizer()
-        :   mLastFileLoaded(""),
-        mLastAlpha(0.0),
-        mLastInvertAlpha(false),
-        mLastPath(""),
-        mLastFile(""),
-        mLastExt(""),
-        mLastColorFromIndex(-1),
-        mLastAlphaFromIndex(-1),
-        mLastRadiusFromIndex(-1),
-        mLastColor(1,0,0),
-        mLastRadius(1.0),
-        cacheChanged(false),
-        frameChanged(false),
-        multiplier(1.0),
-        mFlipped(false),
-        drawError(false)
+    : multiplier(1.0),
+      cacheChanged(false),
+      mLastFileLoaded(""),
+      mLastPath(""),
+      mLastFile(""),
+      mLastExt(""),
+      mLastColorFromIndex(-1),
+      mLastAlphaFromIndex(-1),
+      mLastRadiusFromIndex(-1),
+      mLastColor(1,0,0),
+      mLastAlpha(0.0),
+      mLastInvertAlpha(false),
+      mLastRadius(1.0),
+      mFlipped(false),
+      frameChanged(false),
+      drawError(false)
 {
     pvCache.particles = NULL;
     pvCache.flipPos = (float *) malloc(sizeof(float));

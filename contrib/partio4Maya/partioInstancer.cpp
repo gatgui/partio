@@ -29,7 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #include "partioInstancer.h"
 
-static MGLFunctionTable *gGLFT = NULL;
+//static MGLFunctionTable *gGLFT = NULL;
 
 #define ID_PARTIOINSTANCER  0x00116ED5 // id is registered with autodesk no need to change
 #define LEAD_COLOR				18	// green
@@ -131,28 +131,28 @@ partioInstReaderCache::partioInstReaderCache():
 
 /// Constructor
 partioInstancer::partioInstancer()
-        :   mLastFileLoaded(""),
-        mLastPath(""),
-        mLastFile(""),
-        mLastExt(""),
-        mLastRotationTypeIndex(-1),
-        mLastRotationFromIndex(-1),
-        mLastLastRotationFromIndex(-1),
-        mLastAimDirectionFromIndex(-1),
-		mLastLastAimDirecitonFromIndex(-1),
-		mLastAimPositionFromIndex(-1),
-		mLastLastAimPositionFromIndex(-1),
-		mLastAimAxisFromIndex(-1),
-		mLastAimUpAxisFromIndex(-1),
-		mLastAimWorldUpFromIndex(-1),
-        mLastScaleFromIndex(-1),
-        mLastLastScaleFromIndex(-1),
-        mLastIndexFromIndex(-1),
-        cacheChanged(false),
-        frameChanged(false),
-        multiplier(1.0),
-        canMotionBlur(false),
-        mFlipped(false)
+    : multiplier(1.0),
+      cacheChanged(false),
+      mLastFileLoaded(""),
+      mLastPath(""),
+      mLastFile(""),
+      mLastExt(""),
+      mFlipped(false),
+      frameChanged(false),
+      mLastRotationTypeIndex(-1),
+      mLastRotationFromIndex(-1),
+      mLastLastRotationFromIndex(-1),
+      mLastAimDirectionFromIndex(-1),
+      mLastLastAimDirecitonFromIndex(-1),
+      mLastAimPositionFromIndex(-1),
+      mLastLastAimPositionFromIndex(-1),
+      mLastAimAxisFromIndex(-1),
+      mLastAimUpAxisFromIndex(-1),
+      mLastAimWorldUpFromIndex(-1),
+      mLastScaleFromIndex(-1),
+      mLastLastScaleFromIndex(-1),
+      mLastIndexFromIndex(-1),
+      canMotionBlur(false)
 {
     pvCache.particles = NULL;
     pvCache.flipPos = (float *) malloc(sizeof(float));
@@ -466,7 +466,7 @@ partioInstReaderCache* partioInstancer::updateParticleCache()
 MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 {
     MStatus stat;
-	int rotationType 				= block.inputValue( aRotationType ).asInt();
+	/*int rotationType 				=*/ block.inputValue( aRotationType ).asInt();
     int rotationFromIndex  			= block.inputValue( aRotationFrom ).asInt();
 	int lastRotFromIndex			= block.inputValue( aLastRotationFrom ).asInt();
     int scaleFromIndex				= block.inputValue( aScaleFrom ).asInt();
@@ -518,7 +518,7 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
         bool computeMotionBlur =block.inputValue( aComputeVeloPos ).asBool();
 		float veloMult 		= block.inputValue ( aVeloMult ).asFloat();
 
-        int fps = (float)(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
+        //int fps = (float)(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
         int integerTime = (int)floor((inputTime.value())+.52);
         float deltaTime  = float(inputTime.value() - integerTime);
 
@@ -618,8 +618,8 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
                 return ( MS::kFailure );
             }
 
-            MFnArrayAttrsData::Type vectorType(MFnArrayAttrsData::kVectorArray);
-            MFnArrayAttrsData::Type doubleType(MFnArrayAttrsData::kDoubleArray);
+            //MFnArrayAttrsData::Type vectorType(MFnArrayAttrsData::kVectorArray);
+            //MFnArrayAttrsData::Type doubleType(MFnArrayAttrsData::kDoubleArray);
 
 			// instanceData arrays
 			MVectorArray  positionArray;
@@ -1310,7 +1310,7 @@ void partioInstancerUI::drawPartio(partioInstReaderCache* pvCache, int drawStyle
     float pointSizeVal;
     pointSizePlug.getValue( pointSizeVal );
 
-    int stride =  3*sizeof(float);
+    //int stride =  3*sizeof(float);
 
     if (pvCache->particles)
     {

@@ -66,7 +66,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MStringArray.h>
 #include <maya/MTime.h>
 
-#include "iconArrays.h"
 #include "Partio.h"
 
 extern const int kTableMask;
