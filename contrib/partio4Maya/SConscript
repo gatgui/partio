@@ -1,7 +1,7 @@
 import os
 import sys
 
-Import('env variant_build_abs variant_install_abs GetInstallPath')
+Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallPath')
 
 mayaVer = ARGUMENTS.get("maya-ver", "2013")
 mayaDir = ARGUMENTS.get("maya-dir", None)
@@ -16,14 +16,21 @@ if mayaDir is None:
 
 mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                     LIBPATH=[variant_build_abs + "/lib"],
-                    LIBS=["partio", "z"])
+                    LIBS=["partio", zlib_name])
+
+if zlib_dir:
+    mayaenv.Append(CPPPATH=[zlib_dir + "/include"])
+    mayaenv.Append(LIBPATH=[zlib_dir + "/lib"])
+elif sys.platform == "win32":
+    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 mayaenv.Append(CPPDEFINES=["_BOOL", "REQUIRE_IOSTREAM"])
 mayaenv.Append(CPPPATH=[os.path.join(mayaDir, "include")])
 mayaenv.Append(LIBPATH=[os.path.join(mayaDir, "lib")])
-mayaenv.Append(LIBS=["OpenMaya", "Foundation", "OpenMayaAnim", "OpenMayaFX", "OpenMayaUI", "OpenMayaRender", "z"])
+mayaenv.Append(LIBS=["OpenMaya", "Foundation", "OpenMayaAnim", "OpenMayaFX", "OpenMayaUI", "OpenMayaRender"])
 if sys.platform == "win32":
-    mayaenv.Append(LIBS=["opengl32", "glu32"])
+    mayaenv.Append(CPPDEFINES=["NT_PLUGIN"])
+    mayaenv.Append(LIBS=["opengl32", "glu32", "shell32"])
     pluginExt = ".mll"
 else:
     if sys.platform == "darwin":
@@ -34,6 +41,8 @@ else:
         mayaenv.Append(CPPDEFINES=["LINUX"])
         mayaenv.Append(LIBS=["GL", "GLU"])
         pluginExt = ".so"
+mayaenv["SHLIBPREFIX"] = ""
+mayaenv["SHLIBSUFFIX"] = pluginExt
 
 thisdir = Dir(".").srcnode().abspath
 
@@ -41,7 +50,6 @@ def cppFiles(basePath):
     return [x for x in os.listdir(basePath) if x.endswith(".cpp")]
 
 srcs = cppFiles(thisdir)
-print("srcs = %s" % srcs)
 plugin = mayaenv.LoadableModule("partio4Maya" + pluginExt, srcs)
 
 build_dir = variant_build_abs + "/maya/%s" % mayaVer
@@ -54,5 +62,7 @@ mayaenv.Install(build_dir + "/plug-ins", plugin)
 maya_targets = [mayaenv.Install(out_dir + "/icons", Glob(thisdir + "/icons/*.png")),
                 mayaenv.Install(out_dir + "/scripts", Glob(thisdir + "/scripts/*.mel")),
                 mayaenv.Install(out_dir + "/plug-ins", plugin)]
+if sys.platform == "win32" and zlib_dir:
+    maya_targets.append(mayaenv.Install(out_dir + "/plug-ins", zlib_dir + "/lib/zlib.dll"))
 
 env.Alias('maya', maya_targets)

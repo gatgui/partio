@@ -32,63 +32,54 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 import os
 import sys
+from distutils import sysconfig
 
 python_ver = sys.version[:3]
 python_inc = 'include/python%s' % python_ver
 python_mod = 'lib/python%s/site-packages' % python_ver
 
-Import('env variant_build_abs variant_install_abs')
+Import('env variant_build_abs variant_install_abs zlib_dir zlib_name swig_dir')
 
 envpy = env.Clone(CPPPATH=[variant_build_abs + "/include"],
-	              LIBPATH="%s/lib" % variant_build_abs,
-	              LIBS=["partio"])
+                  LIBPATH="%s/lib" % variant_build_abs,
+                  LIBS=["partio", zlib_name])
 
+if zlib_dir:
+    envpy.Append(CPPPATH=[zlib_dir + "/include"])
+    envpy.Append(LIBPATH=[zlib_dir + "/lib"])
+elif sys.platform == "win32":
+    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
-pythonDir = "/usr"
-#pythonDir=os.environ["RP_python2"]
+if swig_dir:
+    envpy["SWIG"] = swig_dir + "/swig"
+elif sys.platform == "win32" and envpy.WhereIs("swig") is None:
+    raise Exception("Please specify swig directory using with-swig=<path> (swig package can be found in winReqLibs folder)")
 
-envpy.Append(CXXFLAGS=["-Wno-format"])
-envpy.Append(CPPPATH=[pythonDir + "/include/python%s" % python_ver],
-             LIBPATH=["%s/lib" % variant_build_abs],
-             LIBS=["partio"])
+swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall $SOURCE', suffix='.cc', src_suffix='.i')
+envpy.Append(BUILDERS={"SwigGen": swig_builder})
 
-envpy.Append(SWIGFLAGS=['-c++','-python','-Wall'])
-#envpy["SWIG"]="%s/bin/swig"%os.environ["RP_swig"]
+envpy.Append(CPPPATH=[sysconfig.get_python_inc()])
+envpy["SHLIBPREFIX"] = ""
+envpy["SHLIBSUFFIX"] = sysconfig.get_config_var("SO")
 
+if sys.platform == "win32":
+    envpy.Append(LIBPATH=[sysconfig.PREFIX+'/libs'])
+    envpy.Append(LIBS="python%s" % python_ver.replace(".", ""))
+else:
+    envpy.Append(CXXFLAGS=["-Wno-format"])
+    if sys.platform == "darwin":
+        envpy.Append(LINKFLAGS=["-framework", "python"])
+    else:
+        envpy.Append(LIBS="python%s" % python_ver)
 
-if env["mac"]:
-    envpy.Append(LINKFLAGS=["-framework","python"], LIBS=["z","partio"])
-lib = envpy.SharedLibrary("partio", ["partio.i"], LIBS=["z","partio"])
-#print lib
-dp1 = envpy.InstallAs(variant_install_abs + "/%s/_partio.so" % python_mod,lib)
-dp2 = envpy.InstallAs(variant_install_abs + "/%s/partio.py" % python_mod, "partio.py")
+src = envpy.SwigGen("partio_wrap.cc", "partio.i")
+lib = envpy.SharedLibrary("_partio", [src])
+dp1 = envpy.Install(variant_install_abs + "/" + python_mod, lib)
+dp2 = envpy.Install(variant_install_abs + "/" + python_mod, "partio.py")
 envpy.Depends(dp1, dp2)
 
-envpy.Alias('python', [dp1, dp2])
-
-# Find all .cpp's and make them into programs with same names as cpp
-#filter={"partview.cpp":0}  # don't compile this, it requires better env
-#dir=Dir(".").srcnode().abspath
-#files=[x for x in os.listdir(dir) if x.endswith(".cpp") and x not in filter]
-#targets=[x.replace(".cpp","") for x in files]
-#
-#for i in range(len(files)):
-#    file=files[i]
-#    target=targets[i]
-#    prog=envtools.Program(target,[file])
-#    envtools.Install("../../bin",prog)
-#    envtools.Install(variant_install_abs+"/bin",prog)
-#
-#print os.environ
-#if "RP_qt4" in os.environ:
-#    qtdir=os.environ["RP_qt4"]
-#    #qtdir="/usr/local/Trolltech/Qt-4.5.0/"
-#    envqt=envtools.Clone()
-#    envqt.Append(CXXFLAGS=["-I/%s/include"%qtdir])
-#    envqt.Append(LINKFLAGS=" -F%s/lib -L%s/lib"%(qtdir,qtdir))
-#    envqt.Append(LINKFLAGS=" -lQtGui -lQtCore -lQtOpenGL -lGL")
-#    #envqt.Append(LINKFLAGS=" -framework QtGui -framework QtCore -framework QtOpenGL -framework OpenGL")
-#    prog=envqt.Program("partview",["partview.cpp"])
-#    envqt.Install("../../bin",prog)
-#    envqt.Install(variant_install_abs+"/bin",prog)
-    
+if sys.platform == "win32" and zlib_dir:
+    dp3 = envpy.Install(variant_install_abs + "/" + python_mod, zlib_dir + "/lib/%s.dll" % zlib_name)
+    envpy.Alias('python', [dp1, dp2, dp3])
+else:
+    envpy.Alias('python', [dp1, dp2])

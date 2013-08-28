@@ -30,10 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #ifndef Partio4MayaImport_H
 #define Partio4MayaImport_H
 
-#ifdef WIN32
-	#include <shlobj.h>
-#endif
-
 #include <iostream>
 #include <memory>
 #include <string>

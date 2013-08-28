@@ -134,7 +134,7 @@ static void render()
 
                     if (!sourceChanged)
                     {
-                        camera.fit(fov,bmin,bmax);
+                        camera.fit(float(fov), bmin, bmax);
                     }
                 }
                 if (!particles->attributeInfo("rgbPP", colorAttr) &
@@ -223,7 +223,7 @@ static void render()
     glPopMatrix();
     restorePerspectiveProjection();
 
-    glPointSize(pointSize);
+    glPointSize(GLfloat(pointSize));
 
 
     if (particles->numParticles() > 0)
@@ -270,9 +270,9 @@ static void render()
                 alpha=particles->data<float>(alphaAttr,0);
                 for (int i=0;i<particles->numParticles();i++)
                 {
-                    rgba[i*4] = colorR+brightness;
-                    rgba[(i*4)+1] = colorG+brightness;
-                    rgba[(i*4)+2] = colorB+brightness;
+                    rgba[i*4] = float(colorR+brightness);
+                    rgba[(i*4)+1] = float(colorG+brightness);
+                    rgba[(i*4)+2] = float(colorB+brightness);
                     rgba[(i*4)+3] = alpha[i];
                 }
                 glColorPointer(  4, GL_FLOAT, 0, rgba );
@@ -282,7 +282,7 @@ static void render()
                 rgba = (float *) malloc(particles->numParticles()*sizeof(float)*3);
                 for (int i=0;i<particles->numParticles()*3;i++)
                 {
-                    rgba[i] = colorR+brightness;
+                    rgba[i] = float(colorR+brightness);
                 }
                 glColorPointer(  3, GL_FLOAT, 0, rgba );
             }
@@ -383,7 +383,7 @@ void  reloadParticleFile(int direction)
 
 			else
 			{
-				int padding = numberString.length();
+				int padding = int(numberString.length());
 				stringstream ss;
 				ss << padding;
 				paddingString = "%0";
@@ -477,7 +477,7 @@ void timer(int time)
         static GLuint Clock=glutGet(GLUT_ELAPSED_TIME);
         static GLfloat deltaT;
         Clock = glutGet(GLUT_ELAPSED_TIME);
-        deltaT=Clock-PreviousClock;
+        deltaT = GLfloat(Clock-PreviousClock);
 
         if (deltaT > 200)  // initial key press delay
         {

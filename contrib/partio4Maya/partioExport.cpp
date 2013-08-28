@@ -531,7 +531,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
             struct stat st;
             if (stat(Path.asChar(),&st) < 0)
             {
-#ifdef WIN32
+#ifdef _WIN32
                 HWND hwnd = NULL;
                 const SECURITY_ATTRIBUTES *psa = NULL;
                 SHCreateDirectoryEx(hwnd, Path.asChar(), psa);

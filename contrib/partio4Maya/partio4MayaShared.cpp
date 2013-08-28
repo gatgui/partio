@@ -27,6 +27,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 
+#define _USE_MGL_FT_
+
 #include "partio4MayaShared.h"
 #include "iconArrays.h"
 
@@ -220,7 +222,7 @@ void partio4Maya::updateFileName (MString cacheFile, MString cacheDir,
                                  )
 {
     formatExt = setExt(cacheFormat);
-	int fps = (float)(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
+	float fps = (float)(MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
 
     MStringArray fileParts = partioGetBaseFileName(cacheFile);
 
@@ -501,7 +503,7 @@ void  partio4Maya::initTable( long seed )
 #define drand48() (rand()*(1.0/RAND_MAX))
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
     srand( seed );
 #else
     srand48( seed );

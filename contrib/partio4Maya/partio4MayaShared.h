@@ -32,23 +32,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #pragma once
 
 
-#ifdef WIN32
+#ifdef _WIN32
 #define _WINSOCKAPI_
 #include <windows.h>
+#include <shlobj.h>
 #endif
 
 #ifdef OSMac_MachO_
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
-#elif  WIN32
-#include <gl/GLU.h>
-#include <gl/GL.h>
-#include <GL/glext.h>
+#else
+#ifdef _WIN32
+#include <GL/gl.h>
+#include <GL/glu.h>
+//#include <GL/glext.h>
 #else
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
+#endif
 #endif
 
 #include <sys/stat.h>

@@ -32,19 +32,29 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 import os
+import sys
 
-
-Import('env variant_build_abs variant_install_abs GetInstallPath')
+Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallPath')
 
 libenv = env.Clone()
 #libenv.Append(CXXFLAGS=["-I%s/include" % os.environ["RP_SeExpr"]])
 #libenv.Append(LINKFLAGS=["-I%s/lib" % os.environ["RP_SeExpr"]])
-libenv.Append(LIBS=["z"])
+if zlib_dir:
+	libenv.Append(CPPPATH=[zlib_dir + "/include"])
+	libenv.Append(LIBPATH=[zlib_dir + "/lib"])
+elif sys.platform == "win32":
+	raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+
+libenv.Append(LIBS=[zlib_name])
 if env["mac"]:
     pass
 
-libenv.Append(CXXFLAGS=["-I/opt/local/include", "-pthread"])
-libenv.Append(LINKFLAGS=["-pthread"])
+if sys.platform != "win32":
+	libenv.Append(CXXFLAGS=["-pthread"])
+	libenv.Append(LINKFLAGS=["-pthread"])
+else:
+	libenv.Append(CPPDEFINES=["PARTIO_WIN32"])
+
 thisdir = Dir(".").srcnode().abspath
 
 def cppFiles(basePath, prefix):

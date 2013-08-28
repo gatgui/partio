@@ -209,7 +209,7 @@ template <int k> class KdTree
     ~KdTree();
     /** \brief returns number of points in tree
     */
-    int size() const { return _points.size(); }
+    int size() const { return int(_points.size()); }
     /** \brief Returns the bounding box containing all points in the tree
     */
     const BBox<k>& bbox() const { return _bbox; }
@@ -301,7 +301,7 @@ void KdTree<k>::sort()
     _sorted = 1;
 
     // reorder ids to sort points
-    int np = _points.size();
+    int np = int(_points.size());
     if (!np) return;
     if (np > 1) sortSubtree(0, np, 0);
 

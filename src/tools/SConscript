@@ -31,12 +31,19 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 import os
+import sys
 
-Import('env variant_build_abs variant_install_abs')
+Import('env variant_build_abs variant_install_abs zlib_dir zlib_name glut_dir')
 
 envtools = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                      LIBPATH="%s/lib" % variant_build_abs,
-                     LIBS=["partio", "z"])
+                     LIBS=["partio", zlib_name])
+
+if zlib_dir:
+    envtools.Append(CPPPATH=[zlib_dir + "/include"])
+    envtools.Append(LIBPATH=[zlib_dir + "/lib"])
+elif sys.platform == "win32":
+    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 # Find all .cpp's and make them into programs with same names as cpp
 ignores = set(["partview.cpp", "partconvert.cpp"])
@@ -53,14 +60,29 @@ for i in range(len(srcs)):
     tools.append(envtools.Install(variant_install_abs + "/bin", prog))
 
 envglut = envtools.Clone()
+if glut_dir:
+    envglut.Append(CPPPATH=[glut_dir + "/include"])
+    envglut.Append(LIBPATH=[glut_dir + "/lib/x64"])
+elif sys.platform == "win32":
+    raise Exception("Please specify glut directory using with-glut=<path> (glut package can be found in winReqLibs folder)")
+
 if envglut["mac"]:
     frameworks=["-framework","OpenGL","-framework","GLUT"]
     envglut.Append(LINKFLAGS=frameworks)
 else:
-    envglut.Append(LIBS=["glut","GL","GLU"])
+    if sys.platform == "win32":
+        envglut.Append(LIBS=["opengl32", "glu32", "freeglut"])
+    else:
+        envglut.Append(LIBS=["glut","GL","GLU"])
 
 prog = envglut.Program("partview", ["partview.cpp"])
 envglut.Install("../../bin", prog)
 tools.append(envglut.Install(variant_install_abs + "/bin", prog))
+
+if sys.platform == "win32":
+    if zlib_dir:
+        tools.append(envglut.Install(variant_install_abs + "/bin", zlib_dir + "/lib/zlib.dll"))
+    if glut_dir:
+        tools.append(envglut.Install(variant_install_abs + "/bin", glut_dir + "/bin/x64/freeglut.dll"))
 
 env.Alias('tools', tools)
