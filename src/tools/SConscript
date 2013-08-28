@@ -31,37 +31,36 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 import os
+
 Import('env variant_build_abs variant_install_abs')
 
-envtools=env.Clone(CPPPATH=[variant_build_abs+"/include"]
-              ,LIBPATH="%s/lib"%variant_build_abs
-              ,LIBS=["partio","z"])
+envtools = env.Clone(CPPPATH=[variant_build_abs + "/include"],
+                     LIBPATH="%s/lib" % variant_build_abs,
+                     LIBS=["partio", "z"])
 
 # Find all .cpp's and make them into programs with same names as cpp
-filter={"partview.cpp":0}  # don't compile this, it requires better env
-dir=Dir(".").srcnode().abspath
-files=[x for x in os.listdir(dir) if x.endswith(".cpp") and x not in filter]
-targets=[x.replace(".cpp","") for x in files]
+ignores = set(["partview.cpp", "partconvert.cpp"])
+thisdir = Dir(".").srcnode().abspath
+srcs = [x for x in os.listdir(thisdir) if x.endswith(".cpp") and x not in ignores]
+targets = [x.replace(".cpp", "") for x in srcs]
+tools = []
 
-for i in range(len(files)):
-    file=files[i]
-    target=targets[i]
-    prog=envtools.Program(target,[file])
-    envtools.Install("../../bin",prog)
-    envtools.Install(variant_install_abs+"/bin",prog)
+for i in range(len(srcs)):
+    src = srcs[i]
+    target = targets[i]
+    prog = envtools.Program(target, [src])
+    envtools.Install("../../bin", prog)
+    tools.append(envtools.Install(variant_install_abs + "/bin", prog))
 
-    
-envglut=envtools.Clone()
+envglut = envtools.Clone()
 if envglut["mac"]:
     frameworks=["-framework","OpenGL","-framework","GLUT"]
-    envglut.Append(CXXFLAGS=frameworks)
     envglut.Append(LINKFLAGS=frameworks)
 else:
     envglut.Append(LIBS=["glut","GL","GLU"])
 
-prog=envglut.Program("partview",["partview.cpp"])
-envglut.Install("../../bin",prog)
+prog = envglut.Program("partview", ["partview.cpp"])
+envglut.Install("../../bin", prog)
+tools.append(envglut.Install(variant_install_abs + "/bin", prog))
 
-env.Alias('tools', envglut.Install(variant_install_abs+"/bin",prog))
-
-    
+env.Alias('tools', tools)

@@ -384,7 +384,7 @@ public:
     {
         const std::vector<std::string>& indexes=self->indexedStrs(attr);
         PyObject* list=PyList_New(indexes.size());
-        for(int k=0;k<indexes.size();k++) PyList_SetItem(list,k,PyString_FromString(indexes[k].c_str()));
+        for(size_t k=0;k<indexes.size();k++) PyList_SetItem(list,k,PyString_FromString(indexes[k].c_str()));
         return list;
     }
 }

@@ -36,38 +36,30 @@ import os
 
 Import('env variant_build_abs variant_install_abs GetInstallPath')
 
-#env.Append(CXXFLAGS=["-I%s/include"%os.environ["RP_SeExpr"]])
-#env.Append(LINKFLAGS=["-I%s/lib"%os.environ["RP_SeExpr"]])
+#env.Append(CXXFLAGS=["-I%s/include" % os.environ["RP_SeExpr"]])
+#env.Append(LINKFLAGS=["-I%s/lib" % os.environ["RP_SeExpr"]])
 env.Append(LIBS=["z"])
 if env["mac"]:
-    #env.Append(CXXFLAGS=["-m32"])
     pass
 
-
-env.Append(CXXFLAGS=["-I/opt/local/include","-pthread"])
+env.Append(CXXFLAGS=["-I/opt/local/include", "-pthread"])
 env.Append(LINKFLAGS=["-pthread"])
-dir=Dir(".").srcnode().abspath
+thisdir = Dir(".").srcnode().abspath
 
 def cppFiles(basePath):
-    #print("test %s"%os.getcwd())
     return [os.path.join(basePath,x) for x in os.listdir(basePath) if x.endswith(".cpp")]
 
+srcs = cppFiles(os.path.join(thisdir, "core")) + cppFiles(os.path.join(thisdir, "io"))
+lib = env.Library("partio", srcs)
 
-files=cppFiles(os.path.join(dir,"core"))+cppFiles(os.path.join(dir,"io"))
-lib=env.Library("partio",files)
-foo=Dir(".").abspath+"../../include"
+env.Install(variant_build_abs + "/include", "Partio.h")
+env.Install(variant_build_abs + "/include", "PartioIterator.h")
+env.Install(variant_build_abs + "/include", "PartioAttribute.h")
+env.Install(variant_build_abs + "/lib", lib)
 
-env.Install(variant_build_abs+"/include","Partio.h")
-env.Install(variant_build_abs+"/include","PartioIterator.h")
-env.Install(variant_build_abs+"/include","PartioAttribute.h")
-env.Install(variant_build_abs+"/lib",lib)
+core_targets = [env.Install(variant_install_abs + "/include", "Partio.h"),
+                env.Install(variant_install_abs + "/include", "PartioIterator.h"),
+                env.Install(variant_install_abs + "/include", "PartioAttribute.h"),
+                env.Install(variant_install_abs + "/lib", lib)]
 
-core_targets = [
-    env.Install(variant_install_abs+"/include","Partio.h"),
-    env.Install(variant_install_abs+"/include","PartioIterator.h"),
-    env.Install(variant_install_abs+"/include","PartioAttribute.h"),
-    env.Install(variant_install_abs+"/lib",lib)
-]
-
-
-env.Alias('core', core_targets )
+env.Alias('core', core_targets)
