@@ -43,7 +43,7 @@ if zlib_dir:
 	libenv.Append(CPPPATH=[zlib_dir + "/include"])
 	libenv.Append(LIBPATH=[zlib_dir + "/lib"])
 elif sys.platform == "win32":
-	raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+	print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 libenv.Append(LIBS=[zlib_name])
 if env["mac"]:

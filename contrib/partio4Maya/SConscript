@@ -22,7 +22,7 @@ if zlib_dir:
     mayaenv.Append(CPPPATH=[zlib_dir + "/include"])
     mayaenv.Append(LIBPATH=[zlib_dir + "/lib"])
 elif sys.platform == "win32":
-    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 mayaenv.Append(CPPDEFINES=["_BOOL", "REQUIRE_IOSTREAM"])
 mayaenv.Append(CPPPATH=[os.path.join(mayaDir, "include")])
@@ -50,7 +50,7 @@ def cppFiles(basePath):
     return [x for x in os.listdir(basePath) if x.endswith(".cpp")]
 
 srcs = cppFiles(thisdir)
-plugin = mayaenv.LoadableModule("partio4Maya" + pluginExt, srcs)
+plugin = mayaenv.LoadableModule("partio4Maya", srcs)
 
 build_dir = variant_build_abs + "/maya/%s" % mayaVer
 out_dir = variant_install_abs + "/maya/%s" % mayaVer

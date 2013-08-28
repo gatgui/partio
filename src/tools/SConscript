@@ -43,7 +43,7 @@ if zlib_dir:
     envtools.Append(CPPPATH=[zlib_dir + "/include"])
     envtools.Append(LIBPATH=[zlib_dir + "/lib"])
 elif sys.platform == "win32":
-    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 # Find all .cpp's and make them into programs with same names as cpp
 ignores = set(["partview.cpp", "partconvert.cpp"])
@@ -64,7 +64,7 @@ if glut_dir:
     envglut.Append(CPPPATH=[glut_dir + "/include"])
     envglut.Append(LIBPATH=[glut_dir + "/lib/x64"])
 elif sys.platform == "win32":
-    raise Exception("Please specify glut directory using with-glut=<path> (glut package can be found in winReqLibs folder)")
+    print("WARNING: You may want to specify glut directory using with-glut=<path> (glut package can be found in winReqLibs folder)")
 
 if envglut["mac"]:
     frameworks=["-framework","OpenGL","-framework","GLUT"]

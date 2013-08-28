@@ -48,12 +48,12 @@ if zlib_dir:
     envpy.Append(CPPPATH=[zlib_dir + "/include"])
     envpy.Append(LIBPATH=[zlib_dir + "/lib"])
 elif sys.platform == "win32":
-    raise Exception("Please specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 if swig_dir:
     envpy["SWIG"] = swig_dir + "/swig"
 elif sys.platform == "win32" and envpy.WhereIs("swig") is None:
-    raise Exception("Please specify swig directory using with-swig=<path> (swig package can be found in winReqLibs folder)")
+    print("WARNING: You may want to specify swig directory using with-swig=<path> (swig package can be found in winReqLibs folder)")
 
 swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall $SOURCE', suffix='.cc', src_suffix='.i')
 envpy.Append(BUILDERS={"SwigGen": swig_builder})
