@@ -385,7 +385,7 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
     {
         string $trsh[] = `nParticle`;
         setAttr ($trsh[1]+".isDynamic") 0;
-        partioImport -p $trsh[1] $path;
+        partioImport -aa -p $trsh[1] $path;
     }
 
 	string $cache = `cacheFile -directory $dirname

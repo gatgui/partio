@@ -37,6 +37,8 @@ static const char *kHelpFlagS 		= "-h";
 static const char *kHelpFlagL 		= "-help";
 static const char *kParticleL		= "-particle";
 static const char *kParticleS		= "-p";
+static const char *kAllAttribFlagS  = "-aa";
+static const char *kAllAttribFlagL  = "-allAttributes";
 
 using namespace std;
 using namespace Partio;
@@ -53,6 +55,7 @@ MSyntax PartioImport::createSyntax()
 
     syntax.addFlag(kParticleS, kParticleL ,  MSyntax::kString);
     syntax.addFlag(kHelpFlagS, kHelpFlagL ,  MSyntax::kNoArg);
+    syntax.addFlag(kAllAttribFlagS, kAllAttribFlagL, MSyntax::kNoArg);
     syntax.addFlag(kAttributeFlagS, kAttributeFlagL, MSyntax::kString, MSyntax::kString);
     syntax.makeFlagMultiUse( kAttributeFlagS );
     syntax.addFlag(kFlipFlagS, kFlipFlagL, MSyntax::kNoArg);
@@ -108,6 +111,9 @@ MStatus PartioImport::doIt(const MArgList& Args)
     {
     }
 
+    /// create all attributes?
+    bool allAttribs = (argData.isFlagSet(kAllAttribFlagS) || argData.isFlagSet(kAllAttribFlagL));
+
     /// parse attribute  flags
     unsigned int numUses = argData.numberOfFlagUses( kAttributeFlagL );
 
@@ -134,6 +140,8 @@ MStatus PartioImport::doIt(const MArgList& Args)
         {
             if (!worldVeloCheck)
             {
+                // This looks pretty bad as attrNames and mayaAttrNames array size won't be in sync
+                // What was the purpose of this? (worldVeloCheck isn't used anywhere else)
                 attrNames.append("velocity");
                 worldVeloCheck = true;
             }
@@ -237,6 +245,40 @@ MStatus PartioImport::doIt(const MArgList& Args)
         std::map<std::string,  MDoubleArray  > doubleAttrArrays;
         // we use this mapping to allow for direct writing of attrs to PP variables
         std::map<std::string, std::string > userPPMapping;
+
+        if (allAttribs)
+        {
+            Partio::ParticleAttribute pioAttr;
+            for (int ai=0; ai<particles->numAttributes(); ++ai)
+            {
+                bool found = false;
+                particles->attributeInfo(ai, pioAttr);
+                MString attrName = pioAttr.name.c_str();
+                for (unsigned int aj=0; aj<attrNames.length(); ++aj)
+                {
+                    if (attrNames[aj] == attrName)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    if (attrName == "id" || attrName == "particleId" ||
+                        attrName == "position" || attrName == "worldPosition" ||
+                        attrName == "velocity" || attrName == "worldVelocity")
+                    {
+                        // special handling for those attributes
+                        continue;
+                    }
+                    else
+                    {
+                        attrNames.append(attrName);
+                        mayaAttrNames.append(attrName);
+                    }
+                }
+            }
+        }
 
         for (unsigned int i=0;i<attrNames.length();i++)
         {
