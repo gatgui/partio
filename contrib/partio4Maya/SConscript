@@ -8,11 +8,17 @@ mayaDir = ARGUMENTS.get("maya-dir", None)
 if mayaDir is None:
     if sys.platform == "win32":
         mayaDir = "C:/Program Files/Autodesk/Maya%s" % mayaVer
+        mayaInc = mayaDir + "/include"
+        mayaLib = mayaDir + "/lib"
     elif sys.platform == "darwin":
         # TODO!
-        mayaDir = "/Applications/Autodesk/Maya%s.app" % mayaVer
+        mayaDir = "/Applications/Autodesk/maya%s" % mayaVer
+        mayaInc = mayaDir + "/devkit/include"
+        mayaLib = mayaDir + "/Maya.app/Contents/MacOS"
     else:
         mayaDir = "/usr/autodesk/maya%s-x64" % mayaVer
+        mayaInc = mayaDir + "/include"
+        mayaLib = mayaDir + "/lib"
 
 mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                     LIBPATH=[variant_build_abs + "/lib"],
@@ -25,8 +31,8 @@ elif sys.platform == "win32":
     print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
 mayaenv.Append(CPPDEFINES=["_BOOL", "REQUIRE_IOSTREAM"])
-mayaenv.Append(CPPPATH=[os.path.join(mayaDir, "include")])
-mayaenv.Append(LIBPATH=[os.path.join(mayaDir, "lib")])
+mayaenv.Append(CPPPATH=[mayaInc])
+mayaenv.Append(LIBPATH=[mayaLib])
 mayaenv.Append(LIBS=["OpenMaya", "Foundation", "OpenMayaAnim", "OpenMayaFX", "OpenMayaUI", "OpenMayaRender"])
 if sys.platform == "win32":
     mayaenv.Append(CPPDEFINES=["NT_PLUGIN"])
@@ -50,7 +56,7 @@ def cppFiles(basePath):
     return [x for x in os.listdir(basePath) if x.endswith(".cpp")]
 
 srcs = cppFiles(thisdir)
-plugin = mayaenv.LoadableModule("partio4Maya", srcs)
+plugin = mayaenv.LoadableModule("partio4Maya"+pluginExt, srcs)
 
 build_dir = variant_build_abs + "/maya/%s" % mayaVer
 out_dir = variant_install_abs + "/maya/%s" % mayaVer
