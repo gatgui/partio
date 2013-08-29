@@ -1,0 +1,3 @@
+[submodule "gto"]
+	path = gto
+	url = git://github.com/gatgui/gto
