@@ -20,7 +20,7 @@ mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
 
 if zlib_dir:
     mayaenv.Append(CPPPATH=[zlib_dir + "/include"])
-    mayaenv.Append(LIBPATH=[zlib_dir + "/lib"])
+    mayaenv.Append(LIBPATH=[zlib_dir + "/lib/x64"])
 elif sys.platform == "win32":
     print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
@@ -62,7 +62,5 @@ mayaenv.Install(build_dir + "/plug-ins", plugin)
 maya_targets = [mayaenv.Install(out_dir + "/icons", Glob(thisdir + "/icons/*.png")),
                 mayaenv.Install(out_dir + "/scripts", Glob(thisdir + "/scripts/*.mel")),
                 mayaenv.Install(out_dir + "/plug-ins", plugin)]
-if sys.platform == "win32" and zlib_dir:
-    maya_targets.append(mayaenv.Install(out_dir + "/plug-ins", zlib_dir + "/lib/zlib.dll"))
 
 env.Alias('maya', maya_targets)

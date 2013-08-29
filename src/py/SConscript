@@ -46,7 +46,7 @@ envpy = env.Clone(CPPPATH=[variant_build_abs + "/include"],
 
 if zlib_dir:
     envpy.Append(CPPPATH=[zlib_dir + "/include"])
-    envpy.Append(LIBPATH=[zlib_dir + "/lib"])
+    envpy.Append(LIBPATH=[zlib_dir + "/lib/x64"])
 elif sys.platform == "win32":
     print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
@@ -78,8 +78,4 @@ dp1 = envpy.Install(variant_install_abs + "/" + python_mod, lib)
 dp2 = envpy.Install(variant_install_abs + "/" + python_mod, "partio.py")
 envpy.Depends(dp1, dp2)
 
-if sys.platform == "win32" and zlib_dir:
-    dp3 = envpy.Install(variant_install_abs + "/" + python_mod, zlib_dir + "/lib/%s.dll" % zlib_name)
-    envpy.Alias('python', [dp1, dp2, dp3])
-else:
-    envpy.Alias('python', [dp1, dp2])
+envpy.Alias('python', [dp1, dp2])

@@ -37,17 +37,11 @@ import sys
 Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallPath')
 
 libenv = env.Clone()
-#libenv.Append(CXXFLAGS=["-I%s/include" % os.environ["RP_SeExpr"]])
-#libenv.Append(LINKFLAGS=["-I%s/lib" % os.environ["RP_SeExpr"]])
+
 if zlib_dir:
 	libenv.Append(CPPPATH=[zlib_dir + "/include"])
-	libenv.Append(LIBPATH=[zlib_dir + "/lib"])
 elif sys.platform == "win32":
 	print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
-
-libenv.Append(LIBS=[zlib_name])
-if env["mac"]:
-    pass
 
 if sys.platform != "win32":
 	libenv.Append(CXXFLAGS=["-pthread"])

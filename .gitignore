@@ -43,4 +43,5 @@ partio.build
 /src/doc/*
 build-*
 dist
+winReqLibs/zlib-1.2.3
 

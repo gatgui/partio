@@ -41,7 +41,7 @@ envtools = env.Clone(CPPPATH=[variant_build_abs + "/include"],
 
 if zlib_dir:
     envtools.Append(CPPPATH=[zlib_dir + "/include"])
-    envtools.Append(LIBPATH=[zlib_dir + "/lib"])
+    envtools.Append(LIBPATH=[zlib_dir + "/lib/x64"])
 elif sys.platform == "win32":
     print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
 
@@ -80,8 +80,6 @@ envglut.Install("../../bin", prog)
 tools.append(envglut.Install(variant_install_abs + "/bin", prog))
 
 if sys.platform == "win32":
-    if zlib_dir:
-        tools.append(envglut.Install(variant_install_abs + "/bin", zlib_dir + "/lib/zlib.dll"))
     if glut_dir:
         tools.append(envglut.Install(variant_install_abs + "/bin", glut_dir + "/bin/x64/freeglut.dll"))
 
