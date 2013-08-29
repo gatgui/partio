@@ -278,19 +278,25 @@ global proc attachPartioInstancerToInstancer()
 	}
 }
 
-global proc string pioGetParticles()
+global proc string pioGetParticles(int $warn)
 {
 	string $target = "";
     string $sel[] = `ls -selection`;
     
     if (size($sel) == 0)
     {
-        warning("Please select a nParticle shape");
+        if ($warn == 1)
+        {
+            warning("Please select a nParticle shape");
+        }
         return "";
     }
     else if (size($sel) > 1)
     {
-        warning("Please select a single shape");
+        if ($warn == 1)
+        {
+            warning("Please select a single shape");
+        }
         return "";
     }
     else
@@ -305,12 +311,18 @@ global proc string pioGetParticles()
             string $children[] = `listRelatives -children -shapes -noIntermediate -path -type "nParticle" $sel[0]`;
             if (size($children) == 0)
             {
-                warning("No nParticle shape under " + $sel[0]);
+                if ($warn == 1)
+                {
+                    warning("No nParticle shape under " + $sel[0]);
+                }
                 return "";
             }
             else if (size($children) > 1)
             {
-                warning("More that one nParticle shape under " + $sel[0]);
+                if ($warn == 1)
+                {
+                    warning("More that one nParticle shape under " + $sel[0]);
+                }
                 return "";
             }
             else
@@ -353,11 +365,32 @@ global proc string pioGetFormatFilters()
     return $ff;
 }
 
-global proc string attachPartioCacheEx(string $dirname, string $basename, string $fmt, string $target)
+global proc string attachPartioCacheEx(string $path, string $fmt, string $target)
 {
+    string $dirname = `dirname $path`;
+    string $filename = `basename $path ("."+$fmt)`;
+
+    string $piofmt = "partio-" + $fmt;
+
+    string $tmp[];
+    int $n = `tokenize $filename "." $tmp`;
+
+    string $basename = $tmp[0];
+    for ($i=1; $i<$n-2; $i++)
+    {
+        $basename += "." + $tmp[$i];
+    }
+
+    if ($target == "")
+    {
+        string $trsh[] = `nParticle`;
+        setAttr ($trsh[1]+".isDynamic") 0;
+        partioImport -p $trsh[1] $path;
+    }
+
 	string $cache = `cacheFile -directory $dirname
                                -fileName $basename
-                               -cacheFormat $fmt
+                               -cacheFormat $piofmt
                                -format "OneFilePerFrame"
                                -attachFile
                                -inAttr ($target+".positions")`;
@@ -368,7 +401,7 @@ global proc string attachPartioCacheEx(string $dirname, string $basename, string
 
 global proc string createPartioCache()
 {
-    string $target = pioGetParticles();
+    string $target = pioGetParticles(1);
     if ($target == "")
     {
         return "";
@@ -392,7 +425,7 @@ global proc string createPartioCache()
         string $dirname = `dirname $result[0]`;
         string $filename = `basename $result[0] ("."+$fmt)`;
 
-        $fmt = "partio-" + $fmt;
+        $piofmt = "partio-" + $fmt;
 
         $n = `tokenize $filename "." $tmp`;
 
@@ -410,11 +443,11 @@ global proc string createPartioCache()
         
         // Note: Simulation Rate * Sample Multiplier == Sample(s) per frame
 
-        cacheFile -directory $dirname -fileName $basename -cacheFormat $fmt -format "OneFilePerFrame"
+        cacheFile -directory $dirname -fileName $basename -cacheFormat $piofmt -format "OneFilePerFrame"
                   -startTime $startTime -endTime $endTime -simulationRate $rate -sampleMultiplier $mult
                   -cacheableNode $target;
         
-        return attachPartioCacheEx($dirname, $basename, $fmt, $target);
+        return attachPartioCacheEx($result[0], $fmt, $target);
     }
     else
     {
@@ -424,12 +457,8 @@ global proc string createPartioCache()
 
 global proc string attachPartioCache()
 {
-    string $target = pioGetParticles();
-    if ($target == "")
-    {
-        return "";
-    }
-
+    string $target = pioGetParticles(0);
+    
     string $ff = pioGetFormatFilters();
     if ($ff == 0)
     {
@@ -445,20 +474,7 @@ global proc string attachPartioCache()
         int $n = `tokenize $result[size($result)-1] " " $tmp`;
         string $fmt = `tolower $tmp[0]`;
         
-        string $dirname = `dirname $result[0]`;
-        string $filename = `basename $result[0] ("."+$fmt)`;
-
-        $fmt = "partio-" + $fmt;
-
-        $n = `tokenize $filename "." $tmp`;
-
-        string $basename = $tmp[0];
-        for ($i=1; $i<$n-2; $i++)
-        {
-            $basename += "." + $tmp[$i];
-        }
-        
-        return attachPartioCacheEx($dirname, $basename, $fmt, $target);
+        return attachPartioCacheEx($result[0], $fmt, $target);
     }
     else
     {
