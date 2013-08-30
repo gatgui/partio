@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 
 #include "partioImport.h"
+#include <maya/MMatrix.h>
+#include <maya/MDagPath.h>
 
 static const char *kAttributeFlagS	= "-atr";
 static const char *kAttributeFlagL  = "-attribute";
@@ -118,51 +120,86 @@ MStatus PartioImport::doIt(const MArgList& Args)
     unsigned int numUses = argData.numberOfFlagUses( kAttributeFlagL );
 
     /// loop thru the rest of the attributes given
-    MStringArray  attrNames;
-    MStringArray  mayaAttrNames;
+    MStringArray attrNames;
+    MStringArray mayaAttrNames;
+    MString idAttrName = "";
+    MString positionAttrName = "";
+    MString velocityAttrName = "";
+    bool worldPosition = false;
+    bool worldVelocity = false;
 
-    bool worldVeloCheck = false;
-
-    for ( unsigned int i = 0; i < numUses; i++ )
+    for (unsigned int i = 0; i < numUses; i++)
     {
         MArgList argList;
+        
         status = argData.getFlagArgumentList( kAttributeFlagL, i, argList );
-        if ( !status ) return status;
-
-        MString AttrName = argList.asString( 0, &status );
-        if ( !status ) return status;
-
-        if ( AttrName == "position" || AttrName == "worldPosition"  ||
-                AttrName == "id" || AttrName == "particleId")
-            {}
-
-        else if ( AttrName == "worldVelocity" || AttrName == "velocity" )
+        if (!status)
         {
-            if (!worldVeloCheck)
+            return status;
+        }
+
+        MString attrName = argList.asString( 0, &status );
+        if (!status)
+        {
+            return status;
+        }
+
+        MString mayaAttrName = attrName;
+        if (argList.length() > 1)
+        {
+            mayaAttrName = argList.asString(1);
+        }
+        
+        if (mayaAttrName == "position")
+        {
+            if (positionAttrName == "" || worldPosition)
             {
-                // This looks pretty bad as attrNames and mayaAttrNames array size won't be in sync
-                // What was the purpose of this? (worldVeloCheck isn't used anywhere else)
-                attrNames.append("velocity");
-                worldVeloCheck = true;
+                // position attribute not found or is in world space (give precedence to object space)
+                positionAttrName = attrName;
+                worldPosition = false;
+            }
+        }
+        else if (mayaAttrName == "velocity")
+        {
+            if (velocityAttrName == "")
+            {
+                // velocity attribute not found or is in world space (give precedence to world space [set not below on MFnParticleSystem.emit])
+                velocityAttrName = attrName;
+                worldVelocity = false;
+            }
+        }
+        else if (mayaAttrName == "worldPosition")
+        {
+            if (positionAttrName == "")
+            {
+                positionAttrName = attrName;
+                worldPosition = true;
+            }
+        }
+        else if (mayaAttrName == "worldVelocity")
+        {
+            if (velocityAttrName == "" || !worldVelocity)
+            {
+                velocityAttrName = attrName;
+                worldVelocity = true;
+            }
+        }
+        else if (mayaAttrName == "particleId" || mayaAttrName == "id")
+        {
+            if (idAttrName == "")
+            {
+                idAttrName = attrName;
             }
         }
         else
         {
-            attrNames.append(AttrName);
-            if (argList.length() > 1)
-            {
-                mayaAttrNames.append(argList.asString( 1 ));
-            }
-            else
-            {
-                mayaAttrNames.append(AttrName);
-            }
+            attrNames.append(attrName);
+            mayaAttrNames.append(mayaAttrName);
         }
     }
 
     MString particleCache; // particleCache file
     argData.getCommandArgument(0, particleCache);
-
 
     if (!partio4Maya::partioCacheExists(particleCache.asChar()))
     {
@@ -177,20 +214,19 @@ MStatus PartioImport::doIt(const MArgList& Args)
         particleShape = foo[1];
     }
 
-
     MSelectionList list;
     list.add(particleShape);
-    MObject objNode;
-    list.getDependNode(0, objNode);
+    MDagPath objPath;
+    list.getDagPath(0, objPath);
 
-    if ( objNode.apiType() != MFn::kParticle && objNode.apiType() != MFn::kNParticle )
+    if (objPath.apiType() != MFn::kParticle && objPath.apiType() != MFn::kNParticle)
     {
         MGlobal::displayError("PartioImport-> can't find your PARTICLESHAPE.");
         return MStatus::kFailure;
     }
 
     MStatus stat;
-    MFnParticleSystem partSys(objNode, &stat);
+    MFnParticleSystem partSys(objPath, &stat);
     MString partName = partSys.particleName();
 
     if (!makeParticle)
@@ -210,8 +246,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
         Partio::ParticleAttribute velocityAttr;
 
         MGlobal::displayInfo(MString ("PartioImport-> LOADING: ") + particleCache);
-        particles=read(particleCache.asChar());
-        bool hasVelo = true;
+        particles = read(particleCache.asChar());
 
         if (!particles || particles->numParticles() <=0)
         {
@@ -223,40 +258,81 @@ MStatus PartioImport::doIt(const MArgList& Args)
         sprintf (partCount, "%d", particles->numParticles());
         MGlobal::displayInfo(MString ("PartioImport-> LOADED: ") + partCount + MString (" particles"));
 
+        
 
-        if (!particles->attributeInfo("position",positionAttr) &&
-                !particles->attributeInfo("Position",positionAttr))
+        bool validPosition = false;
+        if (positionAttrName != "")
         {
-            MGlobal::displayError("PartioImport->Failed to find position attribute ");
+            validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
+        }
+        else
+        {
+            positionAttrName = "position";
+            validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
+            if (!validPosition)
+            {
+                positionAttrName = "Position";
+                validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
+            }
+        }
+        if (!validPosition)
+        {
+            MGlobal::displayError("PartioImport-> Failed to find position attribute ");
             return ( MS::kFailure );
         }
-        if (!particles->attributeInfo("velocity",velocityAttr) &&
-                !particles->attributeInfo("Velocity",velocityAttr) &&
-                !particles->attributeInfo("vel",velocityAttr) &&
-                !particles->attributeInfo("Vel",velocityAttr))
+        
+        bool validVelocity = false;
+        if (velocityAttrName != "")
         {
-            MGlobal::displayWarning("PartioImport->Failed to find Velocity attribute ");
-            hasVelo = false;
+            validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+        }
+        else
+        {
+            worldVelocity = true;
+            velocityAttrName = "worldVelocity";
+            validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            if (!validVelocity)
+            {
+                worldVelocity = false;
+                velocityAttrName = "velocity";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+                if (!validVelocity)
+                {
+                    velocityAttrName = "Velocity";
+                    validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+                    if (!validVelocity)
+                    {
+                        velocityAttrName = "vel";
+                        validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+                        if (!validVelocity)
+                        {
+                            velocityAttrName = "Vel";
+                            validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+                        }
+                    }
+                }
+            }
+        }
+        if (!validVelocity)
+        {
+            velocityAttrName = "";
+            MGlobal::displayWarning("PartioImport-> Failed to find Velocity attribute ");
         }
 
-        MPointArray positions;
-        MVectorArray velocities;
-        std::map<std::string,  MVectorArray  > vectorAttrArrays;
-        std::map<std::string,  MDoubleArray  > doubleAttrArrays;
-        // we use this mapping to allow for direct writing of attrs to PP variables
-        std::map<std::string, std::string > userPPMapping;
-
+        // Now add all remaining attributes if required
         if (allAttribs)
         {
             Partio::ParticleAttribute pioAttr;
             for (int ai=0; ai<particles->numAttributes(); ++ai)
             {
-                bool found = false;
                 particles->attributeInfo(ai, pioAttr);
+                // Here, we use same attribute name for maya
                 MString attrName = pioAttr.name.c_str();
-                for (unsigned int aj=0; aj<attrNames.length(); ++aj)
+                // First check if attribute is not already bound
+                bool found = false;
+                for (unsigned int aj=0; aj<mayaAttrNames.length(); ++aj)
                 {
-                    if (attrNames[aj] == attrName)
+                    if (mayaAttrNames[aj] == attrName)
                     {
                         found = true;
                         break;
@@ -264,12 +340,25 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
                 if (!found)
                 {
-                    if (attrName == "id" || attrName == "particleId" ||
-                        attrName == "position" || attrName == "worldPosition" ||
-                        attrName == "velocity" || attrName == "worldVelocity")
+                    // At this point, we have already looked up position and velocity synonyms
+                    if (attrName == positionAttrName ||
+                        attrName == velocityAttrName ||
+                        attrName == idAttrName || 
+                        attrName == "position" ||
+                        attrName == "velocity" ||
+                        attrName == "worldPosition" ||
+                        attrName == "worldVelocity")
                     {
-                        // special handling for those attributes
                         continue;
+                    }
+                    else if (attrName == "id" ||
+                             attrName == "particleId")
+                    {
+                        if (idAttrName == "")
+                        {
+                            // We haven't found ID attribute yet, bind first coming
+                            idAttrName = attrName;
+                        }
                     }
                     else
                     {
@@ -279,18 +368,24 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
             }
         }
+        
+        MPointArray positions;
+        MVectorArray velocities;
+        std::map<std::string, MVectorArray> vectorAttrArrays;
+        std::map<std::string, MDoubleArray> doubleAttrArrays;
+        // We use this mapping to allow for direct writing of attrs to PP variables
+        std::map<std::string, std::string> userPPMapping;
 
         for (unsigned int i=0;i<attrNames.length();i++)
         {
             Partio::ParticleAttribute testAttr;
             if (particles->attributeInfo(attrNames[i].asChar(), testAttr))
             {
-
                 if (testAttr.count == 3)
                 {
                     if (!partSys.isPerParticleVectorAttribute(mayaAttrNames[i]))
                     {
-                        MGlobal::displayInfo(MString("partioImport->adding ppAttr " + mayaAttrNames[i]) );
+                        MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]) );
                         MString command;
                         command += "pioEmAddPPAttr ";
                         command += mayaAttrNames[i];
@@ -299,7 +394,6 @@ MStatus PartioImport::doIt(const MArgList& Args)
                         command += ";";
                         MGlobal::executeCommand(command);
                     }
-
                     MVectorArray vAttribute;
                     vAttribute.setLength(particles->numParticles());
                     vectorAttrArrays[attrNames[i].asChar()] = vAttribute;
@@ -309,7 +403,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 {
                     if (!partSys.isPerParticleDoubleAttribute(attrNames[i]))
                     {
-                        MGlobal::displayInfo(MString("PartioEmiter->adding ppAttr " + mayaAttrNames[i]));
+                        MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]));
                         MString command;
                         command += "pioEmAddPPAttr ";
                         command += mayaAttrNames[i];
@@ -318,7 +412,6 @@ MStatus PartioImport::doIt(const MArgList& Args)
                         command += ";";
                         MGlobal::executeCommand(command);
                     }
-
                     MDoubleArray dAttribute;
                     dAttribute.setLength(particles->numParticles());
                     doubleAttrArrays[attrNames[i].asChar()] = dAttribute;
@@ -326,27 +419,38 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
                 else
                 {
-                    MGlobal::displayError(MString("PartioEmitter->skipping attr: " + MString(attrNames[i])));
+                    MGlobal::displayError(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])));
                 }
             }
         }
 
-////////////////////////////////////////////////
-///  final particle loop
-
+        /// Final particle loop
         std::map <std::string, MVectorArray >::iterator vecIt;
         std::map <std::string, MDoubleArray >::iterator doubleIt;
+
+        MMatrix iwm, wm;
+        wm = objPath.inclusiveMatrix();
+        iwm = objPath.inclusiveMatrixInverse();
+
+        // If particle node just created, world space == object space
+        if (makeParticle)
+        {
+            // setup worldPosition and worldVelocity so that no matrix multiplication occurs
+            worldPosition = false;
+            worldVelocity = true;
+        }
 
         for (int i=0;i<particles->numParticles();i++)
         {
             const float * partioPositions = particles->data<float>(positionAttr,i);
             MPoint pos (partioPositions[0], partioPositions[1], partioPositions[2]);
-            positions.append(pos);
-            if (hasVelo)
+            positions.append(worldPosition ? pos*iwm : pos);
+            
+            if (validVelocity)
             {
                 const float * partioVelocities = particles->data<float>(velocityAttr,i);
-                MPoint vel (partioVelocities[0], partioVelocities[1], partioVelocities[2]);
-                velocities.append(vel);
+                MVector vel (partioVelocities[0], partioVelocities[1], partioVelocities[2]);
+                velocities.append(worldVelocity ? vel : vel*wm);
             }
 
             if (vectorAttrArrays.size() > 0)
@@ -359,6 +463,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
                     vectorAttrArrays[vecIt->first][i] = MVector(vecVal[0],vecVal[1],vecVal[2]);
                 }
             }
+
             if (doubleAttrArrays.size() > 0)
             {
                 for (doubleIt = doubleAttrArrays.begin(); doubleIt != doubleAttrArrays.end(); doubleIt++)
@@ -369,23 +474,22 @@ MStatus PartioImport::doIt(const MArgList& Args)
                     doubleAttrArrays[doubleIt->first][i] = doubleVal[0];
                 }
             }
-
         }
-        if (!hasVelo)
-
+        if (!validVelocity)
         {
             velocities.setLength(particles->numParticles());
         }
 
-////////////////////////////////////////////////
-/// Finally.... emit
+        /// Emit particles
         if (particles)
         {
             particles->release();
         }
 
         partSys.setCount(positions.length());
-        stat = partSys.emit(positions,velocities);
+        // Seems to MFnParticleSystem expects velocities in world space and positions in local space
+        // Don't ask me why but this is the only way to get matching object-space velocities
+        stat = partSys.emit(positions, velocities);
 
         for (doubleIt = doubleAttrArrays.begin(); doubleIt != doubleAttrArrays.end(); doubleIt++)
         {
