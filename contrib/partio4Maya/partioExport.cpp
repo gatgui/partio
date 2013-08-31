@@ -30,6 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "partioExport.h"
 #include <maya/MPlugArray.h>
 #include <maya/MPlug.h>
+#include <maya/MMatrix.h>
+#include <maya/MDagPath.h>
 
 #define  kAttributeFlagS	"-atr"
 #define  kAttributeFlagL	"-attribute"
@@ -123,7 +125,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
     if ( Args.length() < 3)
     {
-        MGlobal::displayError("PartioExport-> need the EXPORT PATH and a PARTICLESHAPE's NAME, and at least one ATTRIBUTE's NAME you want to export." );
+        MGlobal::displayError("PartioExport-> Need the export path and a particle shape's name, and at least one attribute's name you want to export.");
         printUsage();
         return MStatus::kFailure;
     }
@@ -167,7 +169,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
                 writefmts += ", ";
             }
         }
-        MGlobal::displayError("PartioExport-> format is one of: " + writefmts);
+        MGlobal::displayError("PartioExport-> Format is one of: " + writefmts);
         setResult(outFiles);
         return MStatus::kFailure;
     }
@@ -213,13 +215,12 @@ MStatus PartioExport::doIt(const MArgList& Args)
     argData.getCommandArgument(0, PSName);
     MSelectionList list;
     list.add(PSName);
-    MObject objNode;
-    list.getDependNode(0, objNode);
-    MFnDependencyNode depNode(objNode, &status);
+    MDagPath objPath;
+    list.getDagPath(0, objPath);
 
-    if ( objNode.apiType() != MFn::kParticle && objNode.apiType() != MFn::kNParticle )
+    if ( objPath.apiType() != MFn::kParticle && objPath.apiType() != MFn::kNParticle )
     {
-        MGlobal::displayError("PartioExport-> can't find your PARTICLESHAPE.");
+        MGlobal::displayError("PartioExport-> Can't find your PARTICLESHAPE.");
         setResult(outFiles);
         return MStatus::kFailure;
     }
@@ -232,7 +233,6 @@ MStatus PartioExport::doIt(const MArgList& Args)
     attrNames.append(MString("id"));
     attrNames.append(MString("position"));
 
-    bool worldVeloCheck = false;
 
     for ( unsigned int i = 0; i < numUses; i++ )
     {
@@ -244,25 +244,19 @@ MStatus PartioExport::doIt(const MArgList& Args)
             return status;
         }
 
-        MString AttrName = argList.asString( 0, &status );
+        MString attrName = argList.asString( 0, &status );
         if ( !status )
         {
             setResult(outFiles);
             return status;
         }
 
-        if ( AttrName == "position" || AttrName == "worldPosition"  || AttrName == "id" || AttrName == "particleId") {}
-        else if ( AttrName == "worldVelocity" || AttrName == "velocity" )
+        if ( attrName == "position" || attrName == "id" || attrName == "particleId")
         {
-            if (!worldVeloCheck)
-            {
-                attrNames.append("velocity");
-                worldVeloCheck = true;
-            }
         }
         else
         {
-            attrNames.append(AttrName);
+            attrNames.append(attrName);
         }
 
     }
@@ -271,7 +265,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
     MComputation computation;
     computation.beginComputation();
 
-    MFnParticleSystem PS(objNode);
+    MFnParticleSystem PS(objPath);
 
     int outFrame= -123456;
 
@@ -331,7 +325,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
         outputPath += ".";
         outputPath += Format;
 
-        MGlobal::displayInfo("PartioExport-> exporting: "+ outputPath);
+        MGlobal::displayInfo("PartioExport-> Exporting: "+ outputPath);
 
 
         unsigned int particleCount = PS.count();
@@ -342,7 +336,6 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
         if (particleCount > 0)
         {
-
             for (unsigned int i = 0; i< attrNames.length(); i++)
             {
                 // you must reset the iterator before adding new attributes or accessors
@@ -505,7 +498,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
                         PS.getPerParticleAttribute( attrName , VA, &status);
                     }
 
-                    Partio::ParticleAttribute  vectorAttribute = p->addAttribute(attrName.asChar(), Partio::VECTOR, 3);
+                    Partio::ParticleAttribute vectorAttribute = p->addAttribute(attrName.asChar(), Partio::VECTOR, 3);
 
                     Partio::ParticleAccessor vectorAccess(vectorAttribute);
 
@@ -521,7 +514,9 @@ MStatus PartioExport::doIt(const MArgList& Args)
                         MVector P = VA[a];
                         vecAttr[0] = (float)P.x;
 
-                        if (swapUP && (attrName == "position" || attrName == "velocity" || attrName == "acceleration" ))
+                        // Note: swapUP only works for object-space coordinates...
+                        //       Should be done in world space as this actually seems to convert between Y-up and Z-up coord sys
+                        if (swapUP && (attrName == "position" || attrName == "velocity" || attrName == "acceleration"))
                         {
                             vecAttr[1] = -(float)P.z;
                             vecAttr[2] = (float)P.y;
