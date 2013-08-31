@@ -108,75 +108,6 @@ struct ArrayAccessor
    }
 };
 
-static unsigned long GetFileList(const MString &dirname, const MString &basename, const MString &ext, MStringArray &files, MTimeArray &times)
-{
-   MStringArray tmp;
-
-   std::string dn = dirname.asChar();
-   if (dn.length() > 0)
-   {
-      char lc = dn[dn.length()-1];
-#ifdef _WIN32
-      if (lc != '\\' && lc != '/')
-#else
-      if (lc != '/')
-#endif
-      {
-         dn.push_back('/');
-      }
-   }
-   else
-   {
-      dn = "./";
-   }
-
-   MString mdn = dn.c_str();
-
-   MGlobal::executeCommand("getFileList -folder \"" + mdn + "\" -filespec \"" + basename + ".*." + ext + "\"", tmp);
-
-   files.clear();
-   times.clear();
-
-   for (unsigned long i=0; i<tmp.length(); ++i)
-   {
-      std::string fpath = tmp[i].asChar();
-
-      size_t p0 = fpath.find_last_of("\\/");
-      if (p0 != std::string::npos)
-      {
-         fpath = fpath.substr(p0+1);
-      }
-
-      p0 = fpath.rfind('.');
-      if (p0 == std::string::npos)
-      {
-         continue;
-      }
-      fpath = fpath.substr(0, p0);
-
-      p0 = fpath.rfind('.');
-      if (p0 == std::string::npos)
-      {
-         continue;
-      }
-
-      // use as frame, do not take into account
-      fpath = fpath.substr(p0+1);
-      int frame = -1;
-      if (sscanf(fpath.c_str(), "%d", &frame) != 1)
-      {
-         continue;
-      }
-
-      MTime ftime(double(frame), MTime::uiUnit());
-      
-      files.append(mdn + tmp[i]);
-      times.append(ftime);
-   }
-
-   return files.length();
-}
-
 // ---
 
 PartioCache::PartioCache(const MString &ext)
@@ -986,10 +917,10 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
    MGlobal::displayInfo("Read description");
 #endif
 
-   MTimeArray times;
-   MStringArray files;
+   //MTimeArray times;
+   //MStringArray files;
 
-   unsigned long n = GetFileList(descFileLoc, descFileName, mExt, files, times);
+   unsigned long n = partio4Maya::getFileList(descFileLoc, descFileName, mExt, mCacheFiles); //files, times);
 
    if (n == 0)
    {
@@ -1001,24 +932,31 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
 
    mDirname = descFileLoc;
    mBasenameNoExt = descFileName;
-   for (unsigned int i=0; i<n; ++i)
-   {
-      mCacheFiles[times[i]] = files[i];
-   }
+   //for (unsigned int i=0; i<n; ++i)
+   //{
+   //   mCacheFiles[times[i]] = files[i];
+   //}
    mCurSample = mCacheFiles.end();
    mLastSample = mCacheFiles.end();
 
-   MTime start = times[0];
-   MTime end = times[0];
-   for (unsigned int i=1; i<times.length(); ++i)
+   //MTime start = times[0];
+   //MTime end = times[0];
+   //for (unsigned int i=1; i<times.length(); ++i)
+   partio4Maya::CacheFiles::iterator fit = mCacheFiles.begin();
+   MTime start = fit->first;
+   MTime end = fit->first;
+   ++fit;
+   for (; fit!=mCacheFiles.end(); ++fit)
    {
-      if (times[i] < start)
+      //if (times[i] < start)
+      if (fit->first < start)
       {
-         start = times[i];
+         start = fit->first; //times[i];
       }
-      if (times[i] > end)
+      //if (times[i] > end)
+      if (fit->first > end)
       {
-         end = times[i];
+         end = fit->first; //times[i];
       }
    }
 
@@ -1026,7 +964,7 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
    MGlobal::displayInfo(MString("  Cache range: ") + start.value() + "-" + end.value());
 #endif
 
-   Partio::ParticlesInfo *pinfo = Partio::readHeaders(files[0].asChar());
+   Partio::ParticlesInfo *pinfo = Partio::readHeaders(mCacheFiles.begin()->second.asChar());
 
    if (!pinfo)
    {

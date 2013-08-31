@@ -67,6 +67,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MVector.h>
 #include <maya/MGlobal.h>
 #include <maya/MStringArray.h>
+#include <maya/MTimeArray.h>
 #include <maya/MTime.h>
 
 #include "Partio.h"
@@ -74,17 +75,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 extern const int kTableMask;
 #define MODPERM(x) permtable[(x)&kTableMask]
 
+// Indices in filename breakdown array
+#define BD_FILENAME 0
+#define BD_PREDELIM 1
+#define BD_POSTDELIM 2
+#define BD_EXT 3
+#define BD_FRAMEPAD 4
+#define BD_SFRAMEPAD 5
+#define BD_ORGFRAME 6
+
 class partio4Maya
 {
 public:
 
+    typedef std::map<MTime, MString> CacheFiles;
+
     static bool 	partioCacheExists(const char* fileName);
     static MStringArray partioGetBaseFileName(MString inFileName);
-    static void 	updateFileName (MString cacheFile, MString cacheDir,
-                                 bool cacheStatic, int cacheOffset,
-                                 short cacheFormat, int integerTime,
-                                 int &cachePadding, MString &formatExt,
-                                 MString &outputFramePath, MString &outputRenderPath);
+    static void 	updateFileName(MString cacheFile,
+                                   MString cacheDir,
+                                   bool cacheStatic,
+                                   int cacheOffset,
+                                   short cacheFormat,
+                                   double t,
+                                   int &framePadding,
+                                   int &sframePadding,
+                                   MString &formatExt,
+                                   MString &outputFramePath,
+                                   MString &outputRenderPath);
 
     static MString 	setExt(short extNum,bool write=false);
     static void 	buildSupportedExtensionList(std::map<short,MString> &formatExtMap,bool write=false);
@@ -92,6 +110,10 @@ public:
     static MVector 	jitterPoint(int id, float freq, float offset, float jitterMag);
     static float  	noiseAtValue( float x);
     static void   	initTable( long seed );
+
+    static unsigned long getFileList(const MString &dirname, const MString &basename, const MString &ext, CacheFiles &files);
+    static void getFrameAndSubframe(double t, int &frame, int &subframe, int subFramePadding=3);
+    static CacheFiles::const_iterator closestCacheFile(MTime t, const CacheFiles &files);
 
 private:
 

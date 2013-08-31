@@ -44,4 +44,5 @@ partio.build
 build-*
 dist
 winReqLibs/zlib-1.2.3
+env.*
 

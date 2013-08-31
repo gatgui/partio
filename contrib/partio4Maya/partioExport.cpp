@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MPlug.h>
 #include <maya/MMatrix.h>
 #include <maya/MDagPath.h>
+#include <maya/MAnimControl.h>
 
 #define  kAttributeFlagS	"-atr"
 #define  kAttributeFlagL	"-attribute"
@@ -39,6 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #define  kMinFrameFlagL		"-minFrame"
 #define  kMaxFrameFlagS		"-mxf"
 #define  kMaxFrameFlagL		"-maxFrame"
+#define  kFrameStepL        "-frameStep"
+#define  kFrameStepS        "-fst"
 #define  kHelpFlagS			"-h"
 #define  kHelpFlagL			"-help"
 #define  kPathFlagS			"-p"
@@ -75,8 +78,9 @@ MSyntax PartioExport::createSyntax()
     syntax.makeFlagMultiUse( kAttributeFlagS );
     syntax.addFlag(kFlipFlagS, kFlipFlagL, MSyntax::kNoArg);
     syntax.addFlag(kFormatFlagS, kFormatFlagL, MSyntax::kString);
-    syntax.addFlag(kMinFrameFlagS,kMinFrameFlagL, MSyntax::kLong);
-    syntax.addFlag(kMaxFrameFlagS, kMaxFrameFlagL, MSyntax::kLong);
+    syntax.addFlag(kMinFrameFlagS,kMinFrameFlagL, MSyntax::kDouble);
+    syntax.addFlag(kMaxFrameFlagS, kMaxFrameFlagL, MSyntax::kDouble);
+    syntax.addFlag(kFrameStepS, kFrameStepL, MSyntax::kDouble);
     syntax.addFlag(kFilePrefixFlagS,kFilePrefixFlagL, MSyntax::kString);
 	syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
     syntax.addArg(MSyntax::kString);
@@ -136,7 +140,8 @@ MStatus PartioExport::doIt(const MArgList& Args)
     MString fileNamePrefix;
     bool hasFilePrefix = false;
 	bool perFrame = false;
-
+    double frameStep = 1.0;
+    bool subFrames = false;
 
     if (argData.isFlagSet(kPathFlagL))
     {
@@ -152,6 +157,14 @@ MStatus PartioExport::doIt(const MArgList& Args)
         if (fileNamePrefix.length() > 0)
         {
             hasFilePrefix = true;
+        }
+    }
+    if (argData.isFlagSet(kFrameStepS))
+    {
+        argData.getFlagArgument(kFrameStepS, 0, frameStep);
+        if (fabs(frameStep - floor(frameStep)) > 0.001)
+        {
+            subFrames = true;
         }
     }
 
@@ -174,32 +187,27 @@ MStatus PartioExport::doIt(const MArgList& Args)
         return MStatus::kFailure;
     }
 
-    bool startFrameSet = false;
-    bool endFrameSet = false;
-    int  startFrame, endFrame;
+    double startFrame, endFrame;
+
     if (argData.isFlagSet(kMinFrameFlagL))
     {
         argData.getFlagArgument(kMinFrameFlagL, 0, startFrame);
-        startFrameSet = true;
     }
     else
     {
-        startFrame = -123456;
+        startFrame = float(MAnimControl::animationStartTime().value());
     }
 
     if (argData.isFlagSet(kMaxFrameFlagL))
     {
         argData.getFlagArgument(kMaxFrameFlagL, 0, endFrame);
-        endFrameSet = true;
     }
     else
     {
-        endFrame = -123456;
+        endFrame = float(MAnimControl::animationEndTime().value());
     }
 
-
     bool swapUP = false;
-
 
     if (argData.isFlagSet(kFlipFlagL))
     {
@@ -267,51 +275,59 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
     MFnParticleSystem PS(objPath);
 
-    int outFrame= -123456;
+    double outFrame;
+    bool firstFrame = true;
 
-    for  (int frame = startFrame; frame<=endFrame; frame++)
+    //for  (int frame = startFrame; frame<=endFrame; frame++)
+    for (double frame=startFrame; frame<=endFrame; frame+=frameStep)
     {
 		MTime dynTime;
+
 		dynTime.setValue(frame);
-		if (frame == startFrame && startFrame < endFrame)
+
+		if (firstFrame && startFrame < endFrame)
 		{
 			PS.evaluateDynamics(dynTime,true);
+            firstFrame = false;
 		}
 		else
 		{
 			PS.evaluateDynamics(dynTime,false);
 		}
 
-		/// why is this being done AFTER the evaluate dynamics stuff?
-        if (startFrameSet && endFrameSet && startFrame < endFrame)
-        {
-            MGlobal::viewFrame(frame);
-            outFrame = frame;
-        }
-        else
-        {
-            outFrame = (int)MAnimControl::currentTime().as(MTime::kFilm);
-        }
+		/// Why is this being done AFTER the evaluate dynamics stuff?
+        MGlobal::viewFrame(dynTime);
+        outFrame = dynTime.value();
 
-        char padNum [10];
+        char padNum[16];
 
-        // temp usage for this..  PDC's  are counted by 250s..  TODO:  implement  "substeps"  setting
+        // Temp usage for this..  PDC's  are counted by 250s..  TODO:  implement  "substeps"  setting
 
         if (Format == "pdc")
         {
-            int substepFrame = outFrame;
-            substepFrame = outFrame*250;
+            double scl = (6000.0 / MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
+            // -> scl == 250 if 24fps
+            int substepFrame = int(outFrame * scl);
             sprintf(padNum, "%d", substepFrame);
         }
         else
         {
-            sprintf(padNum, "%04d", outFrame);
+            if (subFrames)
+            {
+                int ff, sf;
+                partio4Maya::getFrameAndSubframe(outFrame, ff, sf, 3);
+                sprintf(padNum, "%04d.%03d", ff, sf);
+            }
+            else
+            {
+                sprintf(padNum, "%04d", int(outFrame));
+            }
         }
 
-        MString  outputPath =  Path;
+        MString  outputPath = Path;
         outputPath += "/";
 
-        // if we have supplied a fileName prefix, then use it instead of the particle shape name
+        // If we have supplied a fileName prefix, then use it instead of the particle shape name
         if (hasFilePrefix)
         {
             outputPath += fileNamePrefix;

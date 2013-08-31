@@ -133,6 +133,7 @@ private:
     MString mLastFile;
     MString mLastExt;
     bool cacheChanged;
+    partio4Maya::CacheFiles mCacheFiles;
 };
 
 /// inlines

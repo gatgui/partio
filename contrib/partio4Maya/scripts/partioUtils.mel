@@ -29,16 +29,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 global  proc string[]  partioGetBaseFileName(string $inFileName)
 {
-	string $preDelim , $postDelim, $ext = "";
+	string $preDelim = "";
+    string $postDelim = "";
+    string $ext = "";
 	int $padding = 0;
-	string $outFileName[] = {$inFileName,$preDelim,$postDelim, $ext, $padding};
-	int $l = `size $inFileName `;
 
-	int $foundExt = 1;
+	string $outFileName[] = {$inFileName, $preDelim, $postDelim, $ext, $padding};
+	int $l = `size $inFileName`;
 
-	string $breakdownFileName = $inFileName;
+    string $breakdownFileName = $inFileName;
 
-	while ($foundExt)
+	int $foundExt = 0;
+	while ($foundExt == 0)
 	{
 		$l = `size $breakdownFileName`;
 		if ( `gmatch $breakdownFileName "*[a-z]"` || `gmatch $breakdownFileName "*[A-Z]"`)
@@ -48,10 +50,9 @@ global  proc string[]  partioGetBaseFileName(string $inFileName)
 		}
 		else
 		{
-		    $foundExt = 0;
+		    $foundExt = 1;
 		}
 	}
-
 	if (`size $ext` > 0)
 	{
 		$outFileName[3] = $ext;
@@ -60,7 +61,6 @@ global  proc string[]  partioGetBaseFileName(string $inFileName)
 			return $outFileName;
 		}
 		$outFileName[0] = $breakdownFileName;
-
 	}
 	else
 	{
@@ -70,7 +70,7 @@ global  proc string[]  partioGetBaseFileName(string $inFileName)
 	$l = `size $breakdownFileName`;
 	string $last = `substring $breakdownFileName $l $l`;
 
-	if ( $last == "_" || $last == ".")
+	if ($last == "_" || $last == ".")
 	{
 		$outFileName[2] = $last;
 		$breakdownFileName = `substring $breakdownFileName 1 ($l-1)`;
@@ -81,22 +81,20 @@ global  proc string[]  partioGetBaseFileName(string $inFileName)
 		return $outFileName;
 	}
 
-	int $foundNum = 1;
-
-	while ($foundNum)
+	int $foundNum = 0;
+	while ($foundNum == 0)
 	{
 		$l = `size $breakdownFileName`;
-		if ( `gmatch $breakdownFileName "*[0-9]"`)
+		if (`gmatch $breakdownFileName "*[0-9]"`)
 		{
 			$breakdownFileName = `substring $breakdownFileName 1 ($l-1)`;
-			$padding ++;
+			$padding++;
 		}
 		else
 		{
-		    $foundNum = 0;
+		    $foundNum = 1;
 		}
 	}
-
 	if ($padding > 0)
 	{
 		$outFileName[4] = $padding;
@@ -108,11 +106,9 @@ global  proc string[]  partioGetBaseFileName(string $inFileName)
 		return $outFileName;
 	}
 
-
 	$l = `size $breakdownFileName`;
 	string $last = `substring $breakdownFileName $l $l`;
-
-	if ( $last == "_" || $last == ".")
+	if ($last == "_" || $last == ".")
 	{
 		$outFileName[1] = $last;
 		$outFileName[0] = `substring $breakdownFileName 1 ($l-1)`;

@@ -194,7 +194,7 @@ MStatus partioVisualizer::initialize()
     MFnTypedAttribute 	tAttr;
     MStatus				stat;
 
-    time = nAttr.create( "time", "tm", MFnNumericData::kLong ,0);
+    time = uAttr.create("time", "tm", MFnUnitAttribute::kTime, 0);
     uAttr.setKeyable( true );
 
     aSize = uAttr.create( "iconSize", "isz", MFnUnitAttribute::kDistance );
@@ -412,22 +412,23 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         bool invertAlpha 			= block.inputValue( aInvertAlpha ).asBool();
         float defaultRadius			= block.inputValue( aDefaultRadius).asFloat();
         bool forceReload 			= block.inputValue( aForceReload ).asBool();
-        int integerTime				= block.inputValue(time).asInt();
+        MTime t                     = block.inputValue(time).asTime();
         bool flipYZ 				= block.inputValue( aFlipYZ ).asBool();
         MString renderCachePath 	= block.inputValue( aRenderCachePath ).asString();
 
         MString formatExt = "";
-        int cachePadding = 0;
+        //int cachePadding = 0;
+        int framePadding = 0;
+        int sframePadding = 0;
 
         MString newCacheFile = "";
         MString renderCacheFile = "";
 
-        partio4Maya::updateFileName( cacheFile,  cacheDir,
-                                     cacheStatic,  cacheOffset,
-                                     cacheFormat,  integerTime,
-                                     cachePadding, formatExt,
-                                     newCacheFile, renderCacheFile
-                                   );
+        partio4Maya::updateFileName(cacheFile, cacheDir,
+                                    cacheStatic, cacheOffset,
+                                    cacheFormat, t.value(),
+                                    framePadding, sframePadding, formatExt,
+                                    newCacheFile, renderCacheFile);
 
         if (renderCachePath != renderCacheFile || forceReload )
         {
@@ -436,14 +437,14 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
 
         cacheChanged = false;
 
-//////////////////////////////////////////////
-/// Cache can change manually by changing one of the parts of the cache input...
+        //////////////////////////////////////////////
+        /// Cache can change manually by changing one of the parts of the cache input...
         if (mLastExt != formatExt ||
-                mLastPath != cacheDir ||
-                mLastFile != cacheFile ||
-                mLastFlipStatus  != flipYZ ||
-                mLastStatic !=  cacheStatic ||
-                forceReload )
+            mLastPath != cacheDir ||
+            mLastFile != cacheFile ||
+            mLastFlipStatus != flipYZ ||
+            mLastStatic != cacheStatic ||
+            forceReload )
         {
             cacheChanged = true;
             mFlipped = false;

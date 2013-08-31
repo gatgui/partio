@@ -347,29 +347,25 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
 
     bool motionBlurStep = false;
 
-    int integerTime = (int)floor(cT.value()+.52);
+    //int integerTime = (int)floor(cT.value()+.52);
 
     // parse and get the new file name
     MString formatExt = "";
-    int cachePadding = 0;
+    //int cachePadding = 0;
+    int framePadding = 0;
+    int sframePadding = 0;
 
     MString newCacheFile = "";
     MString renderCacheFile = "";
 
-    partio4Maya::updateFileName( cacheFile,  cacheDir,
-                                 cacheStatic,  cacheOffset,
-                                 cacheFormat,  integerTime,
-                                 cachePadding, formatExt,
-                                 newCacheFile, renderCacheFile
-                               );
+    partio4Maya::updateFileName(cacheFile, cacheDir,
+                                cacheStatic, cacheOffset,
+                                cacheFormat, cT.value(),
+                                framePadding, sframePadding, formatExt,
+                                newCacheFile, renderCacheFile);
 
-    float deltaTime  = float(cT.value() - integerTime);
-
-    // motion  blur rounding  frame logic
-    if ((deltaTime < 1 || deltaTime > -1)&& deltaTime !=0)  // motion blur step?
-    {
-        motionBlurStep = true;
-    }
+    //float deltaTime  = float(cT.value() - integerTime);
+    float deltaTime = 0;
 
     long seed = seedValue( multiIndex, block );
 
@@ -389,6 +385,25 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
         mLastExt = formatExt;
         mLastPath = cacheDir;
         mLastFile = cacheFile;
+        partio4Maya::getFileList(cacheDir, cacheFile, formatExt, mCacheFiles);
+    }
+
+    partio4Maya::CacheFiles::const_iterator fit = partio4Maya::closestCacheFile(cT, mCacheFiles);
+    if (fit != mCacheFiles.end())
+    {
+        if (newCacheFile != fit->second)
+        {
+            std::cout << newCacheFile.asChar() << " -> " << fit->second.asChar();
+            newCacheFile = fit->second;
+            deltaTime = float(cT.value() - fit->first.value());
+            std::cout << " (deltaTime: " << deltaTime << ")" << std::endl;
+        }
+    }
+
+    // motion  blur rounding  frame logic
+    if ((deltaTime < 1 || deltaTime > -1) && deltaTime != 0)  // motion blur step?
+    {
+        motionBlurStep = true;
     }
 
     // check if a Partio cache filepath exists and is not the same as last frame
