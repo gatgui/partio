@@ -79,10 +79,9 @@ global proc partioExportGui  ()
 
     optionMenuGrp -e -sl 11 $partioExportFormatOptionMenu;
 
-    string $exportPerFrameCheckbox = `checkBoxGrp -numberOfCheckBoxes 1  -label1 "Per/Frame"  -v1  0`;
-
     string $startFrame = `intFieldGrp -l "StartFrame" -cw 1 90 -cw 2 80 -nf 1  -v $start  0 0 0 `;
     string $endFrame   = `intFieldGrp -l "EndFrame" -cw 1 90 -cw 2 80 -nf 1 -v $end 0 0 0 `;
+    string $frameStep  = `floatFieldGrp -l "Step" -cw 1 90 -cw 2 80 -nf 1 -pre 6 -v 1.0 0 0 0`;
 
 
 /////////////////////////////
@@ -101,7 +100,7 @@ global proc partioExportGui  ()
     buildParticleScrollList();
 
 	// edit functions to buttons
-    button -e -c ("dynExportSelectedparticles "+$startFrame+" "+$endFrame+" "+$partioExportFormatOptionMenu+" "+$cacheDir+" "+$exportPerFrameCheckbox) $dynExportButton;
+    button -e -c ("dynExportSelectedparticles "+$startFrame+" "+$endFrame+" "+$frameStep+" "+$partioExportFormatOptionMenu+" "+$cacheDir) $dynExportButton;
     textFieldButtonGrp -e -bc ("updatePath "+$cacheDir) $cacheDir;
     iconTextButton -e -c "buildParticleScrollList" $refreshButton;
 
@@ -119,13 +118,13 @@ global proc partioExportGui  ()
     -attachForm$partioExportFormatOptionMenu "bottom" 10
     -attachControl $startFrame  "left" 10 $aboutLogoButton
     -attachControl $endFrame "left"10 $aboutLogoButton
-    -attachControl $exportPerFrameCheckbox "top" 5 $endFrame
-    -attachControl $exportPerFrameCheckbox  "left" 75 $aboutLogoButton
+    -attachControl $frameStep "left" 10 $aboutLogoButton
     -attachControl $refreshButton "left" 10 $endFrame
     -attachForm $refreshButton "top" 28
     -attachForm $startFrame "top" 30
     -attachControl $endFrame "top" 5 $startFrame
-    -attachControl $cacheDir "top" 5 $aboutLogoButton
+    -attachControl $frameStep "top" 5 $endFrame
+    -attachControl $cacheDir "top" 5 $aboutLogoButton 
     -attachForm $cacheDir "left"10
 
     $mainLayout;
@@ -237,10 +236,9 @@ global proc buildParticleEntry (string $particle, string $parent, int $color )
 }
 
 
-global proc dynExportSelectedparticles  (string $startFrame, string $endFrame,
+global proc dynExportSelectedparticles  (string $startFrame, string $endFrame, string $frameStep,
 										 string $partioExportOptionMenu,
-										 string $cacheDirCtrl,
-										 string $exportPerFrameCheckbox)
+										 string $cacheDirCtrl)
 {
 	global string $gMainProgressBar;  // This is defined on maya startup
 
@@ -255,10 +253,11 @@ global proc dynExportSelectedparticles  (string $startFrame, string $endFrame,
 
     int $start = `intFieldGrp -q -v1 $startFrame`;
     int $end  = `intFieldGrp  -q -v1 $endFrame`;
+    float $step = `floatFieldGrp -q -v1 $frameStep`;
     string $partioExportFormat = `optionMenuGrp -q -v  $partioExportOptionMenu`;
     string $cacheDir = `textFieldButtonGrp -q -text  $cacheDirCtrl`;
 
-    int $perframe = `checkBoxGrp -q -v1 $exportPerFrameCheckbox`;
+    int $perframe = 0;
 
     string $partioFormatString = `tolower $partioExportFormat `;
 
@@ -318,7 +317,7 @@ global proc dynExportSelectedparticles  (string $startFrame, string $endFrame,
 			// fix windows paths with escape characters
 
 
-					$cmd = ("partioExport -mnf "+$start+" -mxf "+$end+ " -f "+$partioExportFormat+" -atr position -atr id ");
+					$cmd = ("partioExport -mnf "+$start+" -mxf "+$end+" -fst "+$step+" -f "+$partioExportFormat+" -atr position -atr id ");
 					$filePath = `encodeString($cacheDir)`;
 
 					string $attrs[] = `partioExportGuiListParticleAttrs $particle allPP 0 1`;
