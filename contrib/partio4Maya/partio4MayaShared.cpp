@@ -275,8 +275,8 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
         }
         sscanf(frm.asChar(), "%lf", &tval);
         t.setValue(tval);
-        frame = basename.substringW(m[0].rm_so, basename.length()-1);
-        basename = basename.substringW(0, m[0].rm_so-1);
+        frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
+        basename = basename.substringW(0, m[0].rm_so);
     }
     else if (regsearch(&FramePatterns::Pattern2, basename.asChar(), 8, m, 0) == 0)
     {
@@ -293,8 +293,8 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
             tval += ticks * tt.asUnits(MTime::uiUnit());
         }
         t.setValue(tval);
-        frame = basename.substringW(m[0].rm_so, basename.length()-1);
-        basename = basename.substringW(0, m[0].rm_so-1);
+        frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
+        basename = basename.substringW(0, m[0].rm_so);
     }
     else
     {

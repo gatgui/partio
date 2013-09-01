@@ -128,75 +128,65 @@ global proc int pioAEassignCacheFileCB( string $fileAttribute,
 										string $fileName,
 										string $fileType )
 {
-	string $components[];
-  	tokenize $fileAttribute "." $components;
-  	string $nodeName = $components[0];
+    string $components[];
+    tokenize $fileAttribute "." $components;
+    string $nodeName = $components[0];
 
-  	string $fileNameComp[];
+    string $fileNameComp[];
 
-	string $baseFileName = basename($fileName,"");
-	print $baseFileName;
+    string $baseFileName = basename($fileName,"");
+    
+    string $ext = fileExtension($baseFileName);
+    int $hasframe = 0;
 
-	string $fileParts[] = `partioGetBaseFileName($baseFileName)`;
-	string $fileBaseName = $fileParts[0];
-	int $pad = $fileParts[4];
-	string $ext = $fileParts[3];
+    if (size(match("[._][0-9]+[._][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+        size(match("Frame[0-9]+Tick[0-9]+[.]"+$ext, $baseFileName)) > 0 || 
+        size(match("[._][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+        size(match("Frame[0-9]+[.]"+$ext, $baseFileName)) > 0)
+    {
+        $hasframe = 1;
+    }
 
-	setAttr ($nodeName + ".cachePrefix") -type "string" $baseFileName;
+    setAttr ($nodeName + ".cachePrefix") -type "string" $baseFileName;
 
-	float $dv[] = `attributeQuery -node $nodeName -listDefault "cacheFormat"`;
-	int $extIndex = int($dv[0]);
+    float $dv[] = `attributeQuery -node $nodeName -listDefault "cacheFormat"`;
+    int $extIndex = int($dv[0]);
 
-	string $el[] = `attributeQuery -node $nodeName -listEnum "cacheFormat"`;
-	string $exts[];
-	int $i, $n = `tokenize $el[0] ":" $exts`;
-	for ($i=0; $i<$n; $i++)
-	{
-		if (tolower($exts[$i]) == $ext || $exts[$i] == $ext)
-		{
-			$extIndex = $i;
-			break;
-		}
-	}
+    string $el[] = `attributeQuery -node $nodeName -listEnum "cacheFormat"`;
+    string $exts[];
+    int $i, $n = `tokenize $el[0] ":" $exts`;
+    for ($i=0; $i<$n; $i++)
+    {
+        if (tolower($exts[$i]) == $ext || $exts[$i] == $ext)
+        {
+            $extIndex = $i;
+            break;
+        }
+    }
    
-// if padding is not -1 we have a number in the file name otherwise we want to use static cache
-	if ($pad >=0)
-	{
-		setAttr ($nodeName + ".staticCache") 0;
-	}
-	else
-	{
-		setAttr ($nodeName + ".staticCache") 1;
-	}
+    if ($hasframe != 0)
+    {
+        setAttr ($nodeName + ".staticCache") 0;
+    }
+    else
+    {
+        setAttr ($nodeName + ".staticCache") 1;
+    }
 
-	if ($ext == "pdc")
-	{
-		$pad = 0;
-	}
+    setAttr ($nodeName + ".cacheFormat") $extIndex;
 
-	else if ($ext == "mc")
-	{
-		$pad = 0;
-	}
-	else if ($ext == "pts" || $ext == "xyz")
-	{
-		$pad = 0;
-	}
+    $fileName = substituteAllString($fileName, basename($fileName, ""), "");
+    setAttr $fileAttribute -type "string" $fileName;
 
-	setAttr ($nodeName + ".cacheFormat") $extIndex;
+    // This will force an update to display the effects
+    // of the new cachefile.
+    //
+    currentTime `currentTime -q`;
 
-	$fileName = substituteAllString($fileName, basename($fileName, ""), "");
-  	setAttr $fileAttribute -type "string" $fileName;
+    string $currentDir = `workspace -q -dir`;
+    retainWorkingDirectory ($currentDir);
 
-	// This will force an update to display the effects
-	// of the new cachefile.
-	//
-	currentTime `currentTime -q`;
-
-  string $currentDir = `workspace -q -dir`;
-  retainWorkingDirectory ($currentDir);
-
-  return true;
+    return true;
 }
 
 global proc pioAEcacheFileBrowser( string $cmd, string $cacheName )
