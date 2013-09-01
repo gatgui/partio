@@ -305,9 +305,8 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
         if (Format == "pdc")
         {
-            double scl = (6000.0 / MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit()));
-            // -> scl == 250 if 24fps
-            int substepFrame = int(outFrame * scl);
+            double ticksPerFrame = (1.0 / MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit()));
+            int substepFrame = int(outFrame * ticksPerFrame);
             sprintf(padNum, "%d", substepFrame);
         }
         else

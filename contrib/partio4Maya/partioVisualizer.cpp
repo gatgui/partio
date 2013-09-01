@@ -356,7 +356,7 @@ MStatus partioVisualizer::initialize()
     attributeAffects ( aDrawStyle, aUpdateCache );
     attributeAffects ( aForceReload, aUpdateCache );
     attributeAffects (time, aUpdateCache);
-    attributeAffects (time,aRenderCachePath);
+    attributeAffects (time, aRenderCachePath);
 
 
     return MS::kSuccess;
@@ -392,101 +392,124 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
     {
         MStatus stat;
 
-        MString cacheDir 	= block.inputValue(aCacheDir).asString();
+        MString cacheDir = block.inputValue(aCacheDir).asString();
         MString cacheFile = block.inputValue(aCacheFile).asString();
+        bool cacheStatic = block.inputValue( aCacheStatic ).asBool();
+        /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+        /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
+        MFloatVector defaultColor = block.inputValue( aDefaultPointColor ).asFloatVector();
+        float defaultAlpha = block.inputValue( aDefaultAlpha ).asFloat();
+        bool invertAlpha = block.inputValue( aInvertAlpha ).asBool();
+        float defaultRadius = block.inputValue( aDefaultRadius).asFloat();
+        bool forceReload = block.inputValue( aForceReload ).asBool();
+        MTime t = block.inputValue(time).asTime();
+        bool flipYZ = block.inputValue( aFlipYZ ).asBool();
+        MString renderCachePath = block.inputValue( aRenderCachePath ).asString();
+
+        MString frameString;
+        MString formatExt;
+        MString newCacheFile = "";
+        MString renderCacheFile = ""; // with frame replaced by <frame>
 
         drawError = false;
-        if (cacheDir  == "" || cacheFile == "" )
+
+        if (cacheDir  == "" || cacheFile == "")
         {
+            mCacheFiles.clear();
             drawError = true;
-            // too much printing  rather force draw of icon to red or something
-            //MGlobal::displayError("PartioVisualizer->Error: Please specify cache file!");
-            return ( MS::kFailure );
+            return MS::kFailure;
+        }
+        else if (cacheDir != mLastPath || cacheFile != mLastFile)
+        {
+            MString path = cacheDir + "/" + cacheFile;
+            MString dn, bn;
+            MTime frame;
+
+            renderCacheFile = path;
+
+            partio4Maya::identifyPath(path, dn, bn, frameString, frame, formatExt);
+            partio4Maya::getFileList(dn, bn, formatExt, mCacheFiles);
+
+            if (mCacheFiles.size() > 0)
+            {
+                int idx = path.rindexW(frameString);
+                if (idx != -1)
+                {
+                    renderCacheFile = path.substringW(0, idx-1);
+                    renderCacheFile += "<frame>";
+                    renderCacheFile += path.substringW(idx+frameString.length(), path.length()-1);
+                }
+            }
+        }
+        else
+        {
+            formatExt = mLastExt;
+            renderCacheFile = renderCachePath;
         }
 
-        bool cacheStatic			= block.inputValue( aCacheStatic ).asBool();
-        int cacheOffset 			= block.inputValue( aCacheOffset ).asInt();
-        short cacheFormat			= block.inputValue( aCacheFormat ).asShort();
-        MFloatVector defaultColor 	= block.inputValue( aDefaultPointColor ).asFloatVector();
-        float defaultAlpha 			= block.inputValue( aDefaultAlpha ).asFloat();
-        bool invertAlpha 			= block.inputValue( aInvertAlpha ).asBool();
-        float defaultRadius			= block.inputValue( aDefaultRadius).asFloat();
-        bool forceReload 			= block.inputValue( aForceReload ).asBool();
-        MTime t                     = block.inputValue(time).asTime();
-        bool flipYZ 				= block.inputValue( aFlipYZ ).asBool();
-        MString renderCachePath 	= block.inputValue( aRenderCachePath ).asString();
+        partio4Maya::CacheFiles::const_iterator it;
 
-        MString formatExt = "";
-        //int cachePadding = 0;
-        int framePadding = 0;
-        int sframePadding = 0;
+        if (mCacheFiles.size() == 0)
+        {
+            newCacheFile = cacheDir + "/" + cacheFile;
+        }
+        else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_EXACT, t, it))
+        {
+            newCacheFile = it->second;
+        }
 
-        MString newCacheFile = "";
-        MString renderCacheFile = "";
-
-        partio4Maya::updateFileName(cacheFile, cacheDir,
-                                    cacheStatic, cacheOffset,
-                                    cacheFormat, t.value(),
-                                    framePadding, sframePadding, formatExt,
-                                    newCacheFile, renderCacheFile);
-
-        if (renderCachePath != renderCacheFile || forceReload )
+        if (renderCachePath != renderCacheFile)
         {
             block.outputValue(aRenderCachePath).setString(renderCacheFile);
         }
-
         cacheChanged = false;
 
-        //////////////////////////////////////////////
-        /// Cache can change manually by changing one of the parts of the cache input...
         if (mLastExt != formatExt ||
             mLastPath != cacheDir ||
             mLastFile != cacheFile ||
             mLastFlipStatus != flipYZ ||
             mLastStatic != cacheStatic ||
-            forceReload )
+            forceReload)
         {
             cacheChanged = true;
-            mFlipped = false;
-            mLastFlipStatus = flipYZ;
             mLastExt = formatExt;
             mLastPath = cacheDir;
             mLastFile = cacheFile;
+            mLastFlipStatus = flipYZ;
             mLastStatic = cacheStatic;
+            mFlipped = false;
             block.outputValue(aForceReload).setBool(false);
         }
 
 //////////////////////////////////////////////
 /// or it can change from a time input change
 
-        if (!partio4Maya::partioCacheExists(newCacheFile.asChar()))
+        if (!partio4Maya::cacheExists(newCacheFile.asChar()))
         {
-            pvCache.particles=0; // resets the particles
+            pvCache.particles = 0; // resets the particles
             pvCache.bbox.clear();
         }
 
         //  after updating all the file path stuff,  exit here if we don't want to actually load any new data
-		if (!cacheActive)
-		{
-			forceReload = true;
-			pvCache.particles=0; // resets the particles
-            pvCache.bbox.clear();
-			mLastFileLoaded = "";
-			return ( MS::kSuccess );
-		}
-
-        if ( newCacheFile != "" &&
-                partio4Maya::partioCacheExists(newCacheFile.asChar()) &&
-                (newCacheFile != mLastFileLoaded || forceReload)
-           )
+        if (!cacheActive)
         {
+            forceReload = true;
+            pvCache.particles = 0; // resets the particles
+            pvCache.bbox.clear();
+            mLastFileLoaded = "";
+            return MS::kSuccess;
+        }
 
+        if (newCacheFile != "" &&
+            partio4Maya::cacheExists(newCacheFile.asChar()) &&
+            (newCacheFile != mLastFileLoaded || forceReload))
+        {
             cacheChanged = true;
             mFlipped = false;
             MGlobal::displayWarning(MString("PartioVisualizer->Loading: " + newCacheFile));
-            pvCache.particles=0; // resets the particles
+            pvCache.particles = 0; // resets the particles
 
-            pvCache.particles=read(newCacheFile.asChar());
+            pvCache.particles = read(newCacheFile.asChar());
 
             mLastFileLoaded = newCacheFile;
             if (pvCache.particles->numParticles() == 0)
@@ -498,11 +521,10 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
             sprintf (partCount, "%d", pvCache.particles->numParticles());
             MGlobal::displayInfo(MString ("PartioVisualizer-> LOADED: ") + partCount + MString (" particles"));
 
-
             float * floatToRGB = (float *) realloc(pvCache.rgb, pvCache.particles->numParticles()*sizeof(float)*3);
             if (floatToRGB != NULL)
             {
-                pvCache.rgb =  floatToRGB;
+                pvCache.rgb = floatToRGB;
             }
             else
             {
@@ -514,7 +536,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
             float * newRGBA = (float *) realloc(pvCache.rgba,pvCache.particles->numParticles()*sizeof(float)*4);
             if (newRGBA != NULL)
             {
-                pvCache.rgba =  newRGBA;
+                pvCache.rgba = newRGBA;
             }
             else
             {
@@ -548,7 +570,6 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
 
             block.outputValue(aForceReload).setBool(false);
             block.setClean(aForceReload);
-
         }
 
         if (pvCache.particles)

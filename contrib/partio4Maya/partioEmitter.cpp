@@ -249,15 +249,15 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     bool cacheActive = block.inputValue(aCacheActive).asBool();
     if (!cacheActive)
     {
-        return ( MS::kSuccess );
+        return MS::kSuccess;
     }
 
-    int cacheOffset 	= block.inputValue( aCacheOffset ).asInt();
-    short cacheFormat	= block.inputValue( aCacheFormat ).asShort();
-    float jitterPos		= block.inputValue( aJitterPos ).asFloat();
-    float jitterFreq	= block.inputValue( aJitterFreq ).asFloat();
-    bool useEmitterTxfm	= block.inputValue( aUseEmitterTransform ).asBool();
-    bool cacheStatic    = block.inputValue( aCacheStatic ).asBool();
+    /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+    /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
+    float jitterPos = block.inputValue( aJitterPos ).asFloat();
+    float jitterFreq = block.inputValue( aJitterFreq ).asFloat();
+    bool useEmitterTxfm = block.inputValue( aUseEmitterTransform ).asBool();
+    /*bool cacheStatic =*/ block.inputValue( aCacheStatic ).asBool();
     MString cacheDir = block.inputValue(aCacheDir).asString();
     MString cacheFile = block.inputValue(aCacheFile).asString();
 
@@ -270,8 +270,8 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     MPlugArray  connectionArray;
     plug.connectedTo(connectionArray, false, true, &stat);
 
-    MPlug particleShapeOutPlug 	=  connectionArray[0];
-    MObject  particleShapeNode 	=  particleShapeOutPlug.node(&stat);
+    MPlug particleShapeOutPlug = connectionArray[0];
+    MObject  particleShapeNode = particleShapeOutPlug.node(&stat);
     MFnParticleSystem part(particleShapeNode, &stat);
     MString partName = part.particleName();
 
@@ -346,26 +346,20 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     }
 
     bool motionBlurStep = false;
-
-    //int integerTime = (int)floor(cT.value()+.52);
-
-    // parse and get the new file name
-    MString formatExt = "";
-    //int cachePadding = 0;
-    int framePadding = 0;
-    int sframePadding = 0;
-
-    MString newCacheFile = "";
-    MString renderCacheFile = "";
-
-    partio4Maya::updateFileName(cacheFile, cacheDir,
-                                cacheStatic, cacheOffset,
-                                cacheFormat, cT.value(),
-                                framePadding, sframePadding, formatExt,
-                                newCacheFile, renderCacheFile);
-
-    //float deltaTime  = float(cT.value() - integerTime);
     float deltaTime = 0;
+
+    MString formatExt = "";
+    MString newCacheFile = "";
+
+    if (cacheDir != mLastPath || cacheFile != mLastFile)
+    {
+        MString path = cacheDir + "/" + cacheFile;
+        MString _dn, _bn, _fn;
+        MTime f;
+        
+        partio4Maya::identifyPath(path, _dn, _bn, _fn, f, formatExt);
+        partio4Maya::getFileList(_dn, _bn, formatExt, mCacheFiles);
+    }
 
     long seed = seedValue( multiIndex, block );
 
@@ -375,8 +369,7 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     double inheritFactor = inheritFactorValue(multiIndex, block);
 
     // using std:map to give us a nice fast binary search
-    map<int, int>  particleIDMap;
-
+    map<int, int> particleIDMap;
     cacheChanged = false;
 
     if (mLastExt != formatExt || mLastPath != cacheDir || mLastFile != cacheFile)
@@ -385,22 +378,17 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
         mLastExt = formatExt;
         mLastPath = cacheDir;
         mLastFile = cacheFile;
-        partio4Maya::getFileList(cacheDir, cacheFile, formatExt, mCacheFiles);
     }
 
-    partio4Maya::CacheFiles::const_iterator fit = partio4Maya::closestCacheFile(cT, mCacheFiles);
-    if (fit != mCacheFiles.end())
+    partio4Maya::CacheFiles::const_iterator fit;
+    
+    if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, cT, fit))
     {
-        if (newCacheFile != fit->second)
-        {
-            std::cout << newCacheFile.asChar() << " -> " << fit->second.asChar();
-            newCacheFile = fit->second;
-            deltaTime = float(cT.value() - fit->first.value());
-            std::cout << " (deltaTime: " << deltaTime << ")" << std::endl;
-        }
+        newCacheFile = fit->second;
+        deltaTime = float(cT.value() - fit->first.value());
     }
 
-    // motion  blur rounding  frame logic
+    // Motion  blur rounding  frame logic
     if ((deltaTime < 1 || deltaTime > -1) && deltaTime != 0)  // motion blur step?
     {
         motionBlurStep = true;
@@ -408,14 +396,13 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
 
     // check if a Partio cache filepath exists and is not the same as last frame
     //if ( cacheFile != "" && partioCacheExists(cacheFile.asChar()) && cacheFile != mLastFileLoaded)
-    if ( newCacheFile != "" && partio4Maya::partioCacheExists(newCacheFile.asChar()))
+    if ( newCacheFile != "" && partio4Maya::cacheExists(newCacheFile.asChar()))
     {
         MGlobal::displayInfo(MString("partioEmitter->Loading: " + newCacheFile));
         ParticlesDataMutable* particles=0;
         ParticleAttribute IdAttribute;
         ParticleAttribute posAttribute;
         ParticleAttribute velAttribute;
-
 
         particles=read(newCacheFile.asChar());
         if (particles)

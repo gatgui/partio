@@ -201,7 +201,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
     MString particleCache; // particleCache file
     argData.getCommandArgument(0, particleCache);
 
-    if (!partio4Maya::partioCacheExists(particleCache.asChar()))
+    if (!partio4Maya::cacheExists(particleCache.asChar()))
     {
         MGlobal::displayError("Particle Cache Does not exist");
         return MStatus::kFailure;

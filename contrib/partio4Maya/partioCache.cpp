@@ -391,42 +391,9 @@ MStatus PartioCache::findTime(MTime &time, MTime &foundTime)
    MGlobal::displayInfo(MString("PartioCache findTime: ") + time.value());
 #endif
 
-   // Seek function, modifies current sample
-   MTime tol(1.0, MTime::k6000FPS);
-
-   // Try to find extact sample
-   std::map<MTime, MString>::iterator fit = mCacheFiles.find(time);
+   partio4Maya::CacheFiles::iterator fit;
    
-   if (fit == mCacheFiles.end())
-   {
-      // Try to find a sample before time withing tolerance range
-      fit = mCacheFiles.upper_bound(time);
-      if (fit != mCacheFiles.end())
-      {
-         MTime dt = fit->first - time;
-         if (dt > tol)
-         {
-            fit = mCacheFiles.end();
-         }
-      }
-   }
-
-   if (fit == mCacheFiles.end())
-   {
-      // Try to find a sample after time withing tolerance range
-      fit = mCacheFiles.lower_bound(time);
-      if (fit != mCacheFiles.end())
-      {
-         MTime dt = time - fit->first;
-         if (dt > tol)
-         {
-            fit = mCacheFiles.end();
-         }
-      }
-   }
-
-   // If sample found, use it
-   if (fit != mCacheFiles.end())
+   if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_EXACT, time, fit))
    {
 #ifdef _DEBUG
       MGlobal::displayInfo(MString("  Found: ") + fit->first.value());
@@ -438,7 +405,7 @@ MStatus PartioCache::findTime(MTime &time, MTime &foundTime)
          return MStatus::kSuccess;
       }
    }
-   
+
    return MStatus::kFailure;
 }
 

@@ -107,9 +107,6 @@ private:
    MString mBasenameNoExt;
    FileAccessMode mMode;
    MString mExt;
-   //std::map<MTime, MString> mCacheFiles;
-   //std::map<MTime, MString>::iterator mCurSample;
-   //std::map<MTime, MString>::iterator mLastSample;
    partio4Maya::CacheFiles mCacheFiles;
    partio4Maya::CacheFiles::iterator mCurSample;
    partio4Maya::CacheFiles::iterator mLastSample;

@@ -497,61 +497,78 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 
     else
     {
-
-        MString cacheDir 	= block.inputValue(aCacheDir).asString();
-        MString cacheFile = block.inputValue(aCacheFile).asString();
-
-        if (cacheDir  == "" || cacheFile == "" )
-        {
-            // too much noise!
-            //MGlobal::displayError("PartioEmitter->Error: Please specify cache file!");
-            return ( MS::kFailure );
-        }
-
-        bool cacheStatic	= block.inputValue( aCacheStatic ).asBool();
-        int cacheOffset 	= block.inputValue( aCacheOffset ).asInt();
-        short cacheFormat	= block.inputValue( aCacheFormat ).asShort();
-        bool forceReload 	= block.inputValue( aForceReload ).asBool();
-        MTime inputTime		= block.inputValue( time ).asTime();
-        bool flipYZ 		= block.inputValue( aFlipYZ ).asBool();
-        MString renderCachePath = block.inputValue( aRenderCachePath ).asString();
-        bool computeMotionBlur =block.inputValue( aComputeVeloPos ).asBool();
-		float veloMult 		= block.inputValue ( aVeloMult ).asFloat();
-
-        /*
-        int integerTime = (int)floor((inputTime.value())+.52);
-        float deltaTime  = float(inputTime.value() - integerTime);
-
-        bool motionBlurStep = false;
-        // motion  blur rounding  frame logic
-        if ((deltaTime < 1 || deltaTime > -1)&& deltaTime !=0)  // motion blur step?
-        {
-            motionBlurStep = true;
-        }
-        */
-        // disabled for now
-        float deltaTime = 0;
-        bool motionBlurStep = false;
-
         MString formatExt = "";
-        int framePadding = 0;
-        int sframePadding = 0;
-
+        MString frameString = "";
         MString newCacheFile = "";
         MString renderCacheFile = "";
 
-        partio4Maya::updateFileName(cacheFile, cacheDir,
-                                    cacheStatic, cacheOffset,
-                                    cacheFormat, inputTime.value(),
-                                    framePadding, sframePadding, formatExt,
-                                    newCacheFile, renderCacheFile);
+        MString cacheDir = block.inputValue(aCacheDir).asString();
+        MString cacheFile = block.inputValue(aCacheFile).asString();
+        MString renderCachePath = block.inputValue( aRenderCachePath ).asString();
+        /*bool cacheStatic =*/ block.inputValue( aCacheStatic ).asBool();
+        /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+        /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
+        bool forceReload = block.inputValue( aForceReload ).asBool();
+        MTime inputTime = block.inputValue( time ).asTime();
+        bool flipYZ = block.inputValue( aFlipYZ ).asBool();
+        bool computeMotionBlur = block.inputValue( aComputeVeloPos ).asBool();
+        float veloMult = block.inputValue ( aVeloMult ).asFloat();
+
+        if (cacheDir == "" || cacheFile == "" )
+        {
+            // too much noise!
+            //MGlobal::displayError("PartioEmitter->Error: Please specify cache file!");
+            return MS::kFailure;
+        }
+        else if (cacheDir != mLastPath || cacheFile != mLastFile)
+        {
+            MString path = cacheDir + "/" + cacheFile;
+            MString dn, bn;
+            MTime frame;
+            
+            renderCacheFile = path;
+            
+            partio4Maya::identifyPath(path, dn, bn, frameString, frame, formatExt);
+            partio4Maya::getFileList(dn, bn, formatExt, mCacheFiles);
+            
+            if (mCacheFiles.size() > 0)
+            {
+                int idx = path.rindexW(frameString);
+                if (idx != -1)
+                {
+                    renderCacheFile = path.substringW(0, idx-1);
+                    renderCacheFile += "<frame>";
+                    renderCacheFile += path.substringW(idx+frameString.length(), path.length()-1);
+                }
+            }
+        }
+        else
+        {
+            formatExt = mLastExt;
+            renderCacheFile = renderCachePath;
+        }
+
+        float deltaTime = 0;
+        bool motionBlurStep = false;
+        partio4Maya::CacheFiles::const_iterator fit;
+        
         // if file doesn't exists, get previous or next, and interpolate using velocity
+        if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, inputTime, fit))
+        {
+            newCacheFile = fit->second;
+            deltaTime = float(inputTime.value() - fit->first.value());
+        }
+
+        if ((deltaTime < 1 || deltaTime > -1) && deltaTime != 0)
+        {
+            motionBlurStep = true;
+        }
 
         cacheChanged = false;
 
 //////////////////////////////////////////////
 /// Cache can change manually by changing one of the parts of the cache input...
-        if (mLastExt != formatExt || mLastPath != cacheDir || mLastFile != cacheFile ||  mLastFlipStatus  != flipYZ || forceReload )
+        if (mLastExt != formatExt || mLastPath != cacheDir || mLastFile != cacheFile || mLastFlipStatus  != flipYZ || forceReload)
         {
             cacheChanged = true;
             mFlipped = false;
@@ -559,22 +576,10 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             mLastExt = formatExt;
             mLastPath = cacheDir;
             mLastFile = cacheFile;
-            partio4Maya::getFileList(cacheDir, cacheFile, formatExt, mCacheFiles);
             block.outputValue(aForceReload).setBool(false);
         }
 
-        partio4Maya::CacheFiles::const_iterator fit = partio4Maya::closestCacheFile(inputTime, mCacheFiles);
-        if (fit != mCacheFiles.end())
-        {
-            if (newCacheFile != fit->second)
-            {
-                newCacheFile = fit->second;
-                motionBlurStep = true;
-                deltaTime = float(inputTime.value() - fit->first.value());
-            }
-        }
-
-        if (renderCachePath != newCacheFile || renderCachePath != mLastFileLoaded )
+        if (renderCachePath != newCacheFile || renderCachePath != mLastFileLoaded)
         {
             block.outputValue(aRenderCachePath).setString(newCacheFile);
         }
@@ -582,15 +587,15 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 //////////////////////////////////////////////
 /// or it can change from a time input change
 
-        if (!partio4Maya::partioCacheExists(newCacheFile.asChar()))
+        if (!partio4Maya::cacheExists(newCacheFile.asChar()))
         {
             pvCache.particles=0; // resets the particles
             pvCache.bbox.clear();
-			pvCache.instanceData.clear();
-			mLastFileLoaded = "";
+            pvCache.instanceData.clear();
+            mLastFileLoaded = "";
         }
 
-        if ( newCacheFile != "" && partio4Maya::partioCacheExists(newCacheFile.asChar()) && (newCacheFile != mLastFileLoaded || forceReload) )
+        if ( newCacheFile != "" && partio4Maya::cacheExists(newCacheFile.asChar()) && (newCacheFile != mLastFileLoaded || forceReload) )
         {
             cacheChanged = true;
             mFlipped = false;
@@ -602,7 +607,7 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             mLastFileLoaded = newCacheFile;
             if (pvCache.particles->numParticles() == 0)
             {
-				pvCache.instanceData.clear();
+                pvCache.instanceData.clear();
                 return (MS::kSuccess);
             }
 

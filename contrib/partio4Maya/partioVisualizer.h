@@ -198,6 +198,7 @@ private:
     bool  frameChanged;
     MStringArray attributeList;
     bool drawError;
+    partio4Maya::CacheFiles mCacheFiles;
 
 
 protected:

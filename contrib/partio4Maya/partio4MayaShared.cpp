@@ -63,7 +63,7 @@ MVector partio4Maya::jitterPoint(int id, float freq, float offset, float jitterM
 }
 
 //////////////////////////////////////////////////
-bool partio4Maya::partioCacheExists(const char* fileName)
+bool partio4Maya::cacheExists(const char* fileName)
 {
 
     struct stat fileInfo;
@@ -99,478 +99,270 @@ void partio4Maya::getFrameAndSubframe(double t, int &frame, int &subframe, int s
 }
 
 /////////////////////////////////
-partio4Maya::CacheFiles::const_iterator partio4Maya::closestCacheFile(MTime t, const partio4Maya::CacheFiles &files)
+bool partio4Maya::findCacheFile(partio4Maya::CacheFiles &files,
+                                partio4Maya::FindMode mode,
+                                MTime t,
+                                partio4Maya::CacheFiles::iterator &fit)
 {
-    // Seek function, modifies current sample
-   MTime tol(1.0, MTime::k6000FPS);
+    partio4Maya::CacheFiles::iterator fit1, fit2;
 
-   // Try to find extact sample
-   partio4Maya::CacheFiles::const_iterator fit = files.find(t);
-   
-   if (fit == files.end())
-   {
-      // Try to find a sample before time withing tolerance range
-      fit = files.upper_bound(t);
-      if (fit != files.end())
-      {
-         MTime dt = fit->first - t;
-         if (dt > tol)
-         {
-            fit = files.end();
-         }
-      }
-   }
+    fit = files.end();
+    fit1 = files.find(t);
 
-   if (fit == files.end())
-   {
-      // Try to find a sample after time withing tolerance range
-      fit = files.lower_bound(t);
-      if (fit != files.end())
-      {
-         MTime dt = t - fit->first;
-         if (dt > tol)
-         {
-            fit = files.end();
-         }
-      }
-   }
+    if (fit1 != files.end())
+    {
+        fit = fit1;
+    }
+    else if (mode != FM_EXACT)
+    {
+        fit1 = files.upper_bound(t);
+        if (mode == FM_NEXT)
+        {
+            fit = fit1;
+        }
+        else
+        {
+            fit2 = fit1;
+            if (fit2 == files.begin())
+            {
+                fit2 = files.end();
+            }
+            else
+            {
+                fit2--;
+            }
+            if (mode == FM_PREV)
+            {
+                fit = fit2;
+            }
+            else
+            {
+                if (fit1 == files.end())
+                {
+                    fit = fit2;
+                }
+                else if (fit2 == files.end())
+                {
+                    fit = fit1;
+                }
+                else
+                {
+                    double dt1 = fabs(fit1->first.value() - t.value());
+                    double dt2 = fabs(fit2->first.value() - t.value());
+                    fit = (dt1 < dt2 ? fit1 : fit2);
+                }
+            }
+        }
+    }
 
-   return fit;
+    return (fit != files.end());
+}
+
+bool partio4Maya::findCacheFile(const partio4Maya::CacheFiles &files,
+                                partio4Maya::FindMode mode,
+                                MTime t,
+                                partio4Maya::CacheFiles::const_iterator &fit)
+{
+    partio4Maya::CacheFiles::iterator it;
+    if (findCacheFile((partio4Maya::CacheFiles&)files, mode, t, it))
+    {
+        fit = it;
+        return true;
+    }
+    else
+    {
+        fit = files.end();
+        return false;
+    }
 }
 
 /////////////////////////////////
+#include <regex.h>
+
+class FramePatterns
+{
+public:
+    
+    static regex_t Pattern1;
+    static regex_t Pattern2;
+    
+    FramePatterns()
+    {
+        regcomp(&Pattern1, "[._]([0-9]+)([._]([0-9]+))?$", REG_EXTENDED);
+        regcomp(&Pattern2, "Frame([0-9]+)(Tick([0-9]+))?$", REG_EXTENDED);
+    }
+    
+    ~FramePatterns()
+    {
+        regfree(&Pattern1);
+        regfree(&Pattern2);
+    }
+};
+
+int regsearch(regex_t *re, const char *str, size_t nmatch, regmatch_t *pmatch, int flags)
+{
+    const char *c = str;
+    int rv = -1;
+    
+    while (*c != '\0')
+    {
+        rv = regexec(re, c, nmatch, pmatch, flags);
+        if (rv == 0)
+        {
+            break;
+        }
+        ++c;
+    }
+    
+    return rv;
+}
+
+regex_t FramePatterns::Pattern1;
+regex_t FramePatterns::Pattern2;
+
+static FramePatterns _framePatterns;
+
+// ---
+
+bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &basename, MString &frame, MTime &t, MString &ext)
+{
+    int idx;
+    
+#ifdef _WIN32
+    int idx0 = path.rindexW('\\');
+    int idx1 = path.rindexW('/');
+    idx = (idx0 > idx1 ? idx0 : idx1);
+#else
+    idx = path.rindexW('/');
+#endif
+    
+    if (idx == -1)
+    {
+        dirname = "";
+        basename = path;
+    }
+    else
+    {
+        dirname = path.substringW(0, idx-1);
+        basename = path.substringW(idx+1, path.length()-1);
+    }
+    
+    idx = basename.rindexW('.');
+    if (idx == -1)
+    {
+        ext = "";
+    }
+    else
+    {
+        ext = basename.substringW(idx+1, basename.length()-1);
+        basename = basename.substringW(0, idx-1);
+    }
+    
+    // Now identify frame pattern in basename, and extract frame
+    regmatch_t m[8];
+    
+    
+    // .rm.so/.rm_eo (== -> empty string, -1 -> no match)
+    if (regsearch(&FramePatterns::Pattern1, basename.asChar(), 8, m, 0) == 0)
+    {
+        double tval = 0;
+        MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
+        if (m[2].rm_so != -1)
+        {
+            // subframe optional group matched
+            frm += ".";
+            frm += basename.substringW(m[3].rm_so, m[3].rm_eo-1);
+        }
+        sscanf(frm.asChar(), "%lf", &tval);
+        t.setValue(tval);
+        frame = basename.substringW(m[0].rm_so, basename.length()-1);
+        basename = basename.substringW(0, m[0].rm_so-1);
+    }
+    else if (regsearch(&FramePatterns::Pattern2, basename.asChar(), 8, m, 0) == 0)
+    {
+        double tval = 0;
+        MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
+        sscanf(frm.asChar(), "%lf", &tval);
+        if (m[2].rm_so != -1)
+        {
+            // subframe optional group matched
+            MTime tt(1, MTime::k6000FPS);
+            int ticks = 0;
+            frm = basename.substringW(m[3].rm_so, m[3].rm_eo-1);
+            sscanf(frm.asChar(), "%d", &ticks);
+            tval += ticks * tt.asUnits(MTime::uiUnit());
+        }
+        t.setValue(tval);
+        frame = basename.substringW(m[0].rm_so, basename.length()-1);
+        basename = basename.substringW(0, m[0].rm_so-1);
+    }
+    else
+    {
+        frame = "";
+    }
+    
+    MGlobal::displayInfo("identifyPath(" + path + "): dirname=" + dirname + ", basename=" + basename + ", frame=" + frame + ", ext=" + ext);
+    
+    return (frame.length() > 0);
+}
+
+unsigned long partio4Maya::getFileList(const MString &path, partio4Maya::CacheFiles &files)
+{
+    MString dirname, basename, frame, ext;
+    MTime t;
+    
+    identifyPath(path, dirname, basename, frame, t, ext);
+    return getFileList(dirname, basename, ext, files);
+}
+
 unsigned long partio4Maya::getFileList(const MString &dirname, const MString &basename, const MString &ext, partio4Maya::CacheFiles &files)
 {
-   //MStringArray files;
-   //MTimeArray times;
-   MStringArray tmp;
+    double ticksPerFrame = 1.0 / MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
 
-   std::string dn = dirname.asChar();
-   if (dn.length() > 0)
-   {
-      char lc = dn[dn.length()-1];
+    MStringArray tmp;
+
+    std::string dn = dirname.asChar();
+    if (dn.length() > 0)
+    {
+        char lc = dn[dn.length()-1];
 #ifdef _WIN32
-      if (lc != '\\' && lc != '/')
+        if (lc != '\\' && lc != '/')
 #else
-      if (lc != '/')
+        if (lc != '/')
 #endif
-      {
-         dn.push_back('/');
-      }
-   }
-   else
-   {
-      dn = "./";
-   }
-
-   MString mdn = dn.c_str();
-
-   MGlobal::executeCommand("getFileList -folder \"" + mdn + "\" -filespec \"" + basename + ".*." + ext + "\"", tmp);
-
-   //files.clear();
-   //times.clear();
-   files.clear();
-
-   double fps = MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit());
-   double ticksPerFrame = 6000.0 / fps;
-
-   for (unsigned long i=0; i<tmp.length(); ++i)
-   {
-      MStringArray parts = partioGetBaseFileName(tmp[i]);
-      double frame = 1.0;
-
-      if (parts[BD_FRAMEPAD].length() > 0)
-      {
-        int fpad = parts[BD_FRAMEPAD].length();
-
-        MString fmt = "%0";
-        fmt += fpad;
-        fmt += "d";
-
-        if (parts[BD_SFRAMEPAD].length() > 0)
         {
-          int spad = parts[BD_SFRAMEPAD].length();
-
-          fmt += ".%0";
-          fmt += spad;
-          fmt += "d";
-
-          if (parts[BD_EXT] == "mc")
-          {
-            fmt = "Frame%dTick%d";
-          }
-
-          int ff, sf;
-          //std::cout << "partio4Maya::getFileList: frame + subframe pattern " << fmt.asChar() << " on " << parts[BD_ORGFRAME].asChar() << std::endl;
-          if (sscanf(parts[BD_ORGFRAME].asChar(), fmt.asChar(), &ff, &sf) == 2)
-          {
-            frame = double(ff);
-            if (parts[BD_EXT] == "mc")
-            {
-              frame += double(sf) / ticksPerFrame;
-            }
-            else
-            {
-              frame += sf * pow(0.1, spad);
-            }
-          }
+            dn.push_back('/');
         }
-        else
+    }
+    else
+    {
+        dn = "./";
+    }
+
+    MString mdn = dn.c_str();
+
+    MGlobal::executeCommand("getFileList -folder \"" + mdn + "\" -filespec \"" + basename + "*." + ext + "\"", tmp);
+
+    files.clear();
+
+    MString _dn, _bn, _fn, _e;
+    MTime t;
+
+    for (unsigned long i=0; i<tmp.length(); ++i)
+    {
+        if (identifyPath(tmp[i], _dn, _bn, _fn, t, _e))
         {
-          if (parts[BD_EXT] == "mc")
-          {
-            fmt = "Frame%d";
-          }
-
-          int ff;
-          //std::cout << "partio4Maya::getFileList: frame only pattern " << fmt.asChar() << " on " << parts[BD_ORGFRAME].asChar() << std::endl;
-          if (sscanf(parts[BD_ORGFRAME].asChar(), fmt.asChar(), &ff) == 1)
-          {
-            frame = double(ff);
-            if (parts[BD_EXT] == "pdc")
+            if (ext == "pdc")
             {
-              frame /= ticksPerFrame;
+                t /= ticksPerFrame;
             }
-          }
+            files[t] = mdn + tmp[i];
         }
-      }
-      else
-      {
-        //std::cout << "partio4Maya::getFileList: no frame" << std::endl;
-      }
-
-      //std::cout << "partio4Maya::getFileList: \"" << tmp[i] << "\" -> time = " << frame << std::endl;
-
-      files[MTime(frame)] = mdn + tmp[i];
-   }
-
-   //return files.length();
-   return (unsigned long) files.size();
+    }
+    
+    return (unsigned long) files.size();
 }
 
-///////////////////////////////////////////
-/// C++ version of the same mel procedure
-MStringArray partio4Maya::partioGetBaseFileName(MString inFileName)
-{
-    // For heaven's sake, use regular expressions here
-    // Having to deal with specific cache extensions here is a very bad idea too
-    MString preDelim = "";
-    MString postDelim =  "";
-    MString ext = "";
-    MString framePad = "";
-    MString sframePad = "";
-    MString origFrameString = "";
-
-
-    MStringArray outFileName;
-    outFileName.append(inFileName);
-    outFileName.append(preDelim);
-    outFileName.append(postDelim);
-    outFileName.append(ext);
-    outFileName.append(framePad);
-    outFileName.append(sframePad);
-    outFileName.append(origFrameString);
-
-    ///////////////////////////////////////////////////////////
-    /// First we strip off and determine the file extension
-    int l = inFileName.length();
-    bool foundExt = false;
-
-    MString breakdownFileName = inFileName;
-
-    const char* c = breakdownFileName.asChar();
-    int end = breakdownFileName.length()-1;
-    while (!foundExt)
-    {
-        if (isalpha(c[end]))
-        {
-            end--;
-        }
-        else
-        {
-            foundExt = true;
-            ext = breakdownFileName.substringW(end+1, (breakdownFileName.length()-1));
-            breakdownFileName = breakdownFileName.substringW(0, end);
-        }
-    }
-
-    if (ext.length() > 0)
-    {
-        outFileName[BD_EXT] = ext;
-        // Special case for static lidar files
-        if (ext == "pts" || ext == "xyz")
-        {
-        	return outFileName;
-        }
-        else if (ext == "mc")
-        {
-            // use weird .mc file naming convention: Frame%d(Tick%d)?
-            int idx = breakdownFileName.rindexW("Frame");
-            outFileName[BD_PREDELIM] = "";
-            outFileName[BD_POSTDELIM] = ".";
-            outFileName[BD_FRAMEPAD] = "#";
-            outFileName[BD_SFRAMEPAD] = (breakdownFileName.rindexW("Tick") != -1 ? "#" : "");
-            outFileName[BD_FILENAME] = (idx != -1 ? breakdownFileName.substringW(0, idx-1) : breakdownFileName);
-            outFileName[BD_ORGFRAME] = (idx != -1 ? breakdownFileName.substringW(idx, breakdownFileName.length()-1) : "");
-            return outFileName;
-        }
-        outFileName[BD_FILENAME] = breakdownFileName;
-    }
-    else
-    {
-        return outFileName;
-    }
-
-    //////////////////////////////////////////////////////////////
-    /// Then we  determine the postDelim character (only support  "." or  "_"
-    l = breakdownFileName.length()-1;
-    MString last =  breakdownFileName.substringW(l, l);
-
-    if (last == "_" || last == ".")
-    {
-        outFileName[BD_POSTDELIM] = last;
-        breakdownFileName = breakdownFileName.substringW(0, (l-1));
-        outFileName[BD_FILENAME] = breakdownFileName;
-    }
-    else
-    {
-        return outFileName;
-    }
-
-    /////////////////////////////////////////////////////////////
-    /// Now lets  get the frame numbers to determine padding
-    // look for <basepath>(_|.)<frame>(.<subframe>)?
-    bool foundNum = false;
-    const char* f = breakdownFileName.asChar();
-    end = breakdownFileName.length()-1;
-    MString padding = "";
-
-    while (!foundNum)
-    {
-        if (end >= 0 && isdigit(f[end]))
-        {
-            end--;
-            padding += "#";
-        }
-        else
-        {
-            // If subframe padding not yet set and . separated digits found
-            if (sframePad.length() == 0 && f[end] == '.' && end > 1 && isdigit(f[end-1]))
-            {
-                // . could be a preDelim too with fileName ending with numbers...
-                bool isSubFrame = false;
-                int end2 = end - 2;
-                framePad = "#";
-                while (!isSubFrame && end2 >= 0)
-                {
-                    if (isdigit(f[end2]))
-                    {
-                        end2--;
-                        framePad += "#";
-                    }
-                    else
-                    {
-                        if (f[end2] == '.' || f[end2] == '_')
-                        {
-                            isSubFrame = true;
-                        }
-                        break;
-                    }
-                }
-                if (isSubFrame)
-                {
-                    sframePad = padding;
-                    origFrameString = breakdownFileName.substringW(end2+1, breakdownFileName.length()-1);
-                    breakdownFileName = breakdownFileName.substringW(0, end2);
-                    break;
-                }
-            }
-
-            framePad = padding;
-            foundNum = true;
-            origFrameString = breakdownFileName.substringW(end+1, (breakdownFileName.length()-1));
-            breakdownFileName = breakdownFileName.substringW(0, end);
-        }
-    }
-
-    if (framePad.length() == 0)
-    {
-        outFileName[BD_FRAMEPAD] = "";
-        outFileName[BD_SFRAMEPAD] = "";
-        return outFileName;
-    }
-    else
-    {
-        outFileName[BD_FRAMEPAD] = framePad;
-        if (sframePad.length() > 0)
-        {
-            outFileName[BD_SFRAMEPAD] = sframePad;
-        }
-        outFileName[BD_FILENAME] = breakdownFileName;
-        outFileName[BD_ORGFRAME] = origFrameString;
-    }
-
-    /////////////////////////////////////////////////////////////
-    /// Lastly  we  get the  preDelim character, again only supporting "." or "_"
-    l = breakdownFileName.length()-1;
-    last =  breakdownFileName.substringW(l, l);
-
-    if (last == "_" || last == ".")
-    {
-        outFileName[BD_PREDELIM] = last;
-        breakdownFileName = breakdownFileName.substringW(0, (l-1));
-        outFileName[BD_FILENAME] = breakdownFileName;
-    }
-    else
-    {
-        return outFileName;
-    }
-
-    /////////////////////////////////////////////////////////////////////////
-    /// If we've gotten here, we have a fully populated outputFileNameArray
-    return outFileName;
-}
-
-
-
-
-void partio4Maya::updateFileName(MString cacheFile,
-                                 MString cacheDir,
-                                 bool cacheStatic,
-                                 int cacheOffset,
-                                 short cacheFormat,
-                                 //int integerTime,
-                                 double t,
-                                 int &framePadding,
-                                 int &sframePadding,
-                                 MString &formatExt,
-                                 MString &outputFramePath,
-                                 MString &outputRenderPath)
-{
-    formatExt = setExt(cacheFormat);
-    double fps = MTime(1.0, MTime::kSeconds).asUnits(MTime::uiUnit());
-    double ticksPerFrame = 6000.0 / fps;
-
-    MStringArray fileParts = partioGetBaseFileName(cacheFile);
-
-    MString cachePrefix = fileParts[BD_FILENAME];
-    MString preDelim = fileParts[BD_PREDELIM];
-    MString postDelim = fileParts[BD_POSTDELIM];
-    //formatExt = fileParts[3];
-    framePadding = fileParts[BD_FRAMEPAD].length();
-    sframePadding = fileParts[BD_SFRAMEPAD].length();
-    MString origFrameString = fileParts[BD_ORGFRAME];
-
-    //bool tempFix = false;
-
-    float cacheFrame;
-    int frame = 0;
-    int subFrame = 0;
-    MString newCacheFile;
-    MString renderCacheFile;
-
-    ///////////////////////////////////////////////
-    ///  Output path  as normal
-    MString formatString;
-
-    if (!cacheStatic && formatExt != "xyz" && formatExt != "pts")
-    {
-        cacheFrame = t + cacheOffset;
-
-        formatString = "%s%s%s%0";
-
-        if (formatExt == "pdc")
-        {
-            framePadding = 1;
-            sframePadding = 0;
-            cacheFrame *= ticksPerFrame;
-            frame = int(cacheFrame);
-            formatString += "d%s%s";
-        }
-        else if (formatExt == "mc")
-        {
-            frame = int(floor(cacheFrame));
-            float sf = cacheFrame - frame;
-            subFrame = int(floor(sf * ticksPerFrame + 0.5));
-            // The above doesn't work very well... with more that 2 samples per frame (where 0.25 == 0.252 for maya)
-            // If cache was created with a sampling step of 0.25, 0.5 becomes 0.504
-            // -> to get the proper filename we need to know its original sampling.. I gave up
- 
-            //framePadding = 1;
-            //preDelim = "";
- 
-            //if (cachePrefix.rindexW("Tick") != -1)
-            if (subFrame > 0)
-            {
-                sframePadding = 1;
-                formatString = "%s%s%sFrame%dTick%d%s%s";
-            }
-            else
-            {
-                sframePadding = 0;
-                formatString = "%s%s%sFrame%d%s%s";
-            }
-             
-            // Already done in partioGetBaseFileName()
-            //int idx = cachePrefix.rindexW("Frame");
-            //if (idx != -1)
-            //{
-            //    cachePrefix = cachePrefix.substringW(0, idx-1);
-            //}
-        }
-        else
-        {
-            getFrameAndSubframe(cacheFrame, frame, subFrame, sframePadding);
-            formatString += framePadding;
-            if (sframePadding > 0)
-            {
-                formatString += "d.%0";
-                formatString += sframePadding;
-            }
-            formatString += "d%s%s";
-        }
-
-        char fileName[512] = "";
-        const char *fmt = formatString.asChar();
-
-        if (sframePadding > 0)
-        {
-            sprintf(fileName, fmt, cacheDir.asChar(), cachePrefix.asChar(), preDelim.asChar(), frame, subFrame, postDelim.asChar(), formatExt.asChar());
-        }
-        else
-        {
-            sprintf(fileName, fmt, cacheDir.asChar(), cachePrefix.asChar(), preDelim.asChar(), frame, postDelim.asChar(), formatExt.asChar());
-        }
-
-        newCacheFile = fileName;
-    }
-    else
-    {
-        newCacheFile = cacheFile;
-    }
-
-    std::cout << "Cache file path: " << newCacheFile << std::endl;
-
-    ///////////////////////////////////////////
-    /// Output path for render output path
-
-    MString frameString = "<frame>";
-    if (cacheStatic)
-    {
-        frameString = origFrameString;
-    }
-
-
-    formatString =  "%s%s%s%s%s%s";
-    char rfileName[512] = "";
-    const char* rfmt = formatString.asChar();
-    sprintf(rfileName, rfmt, cacheDir.asChar(), cachePrefix.asChar(), preDelim.asChar(), frameString.asChar(), postDelim.asChar(), formatExt.asChar());
-    renderCacheFile = rfileName;
-
-
-    outputFramePath =  newCacheFile;
-    outputRenderPath = renderCacheFile;
-}
 ////////////////////////////////////////////////////////////////
 MString partio4Maya::setExt(short extEnum,bool write)
 {

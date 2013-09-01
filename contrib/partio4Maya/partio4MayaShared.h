@@ -90,30 +90,31 @@ public:
 
     typedef std::map<MTime, MString> CacheFiles;
 
-    static bool 	partioCacheExists(const char* fileName);
-    static MStringArray partioGetBaseFileName(MString inFileName);
-    static void 	updateFileName(MString cacheFile,
-                                   MString cacheDir,
-                                   bool cacheStatic,
-                                   int cacheOffset,
-                                   short cacheFormat,
-                                   double t,
-                                   int &framePadding,
-                                   int &sframePadding,
-                                   MString &formatExt,
-                                   MString &outputFramePath,
-                                   MString &outputRenderPath);
+    static bool cacheExists(const char* fileName);
 
-    static MString 	setExt(short extNum,bool write=false);
-    static void 	buildSupportedExtensionList(std::map<short,MString> &formatExtMap,bool write=false);
-    static void 	drawPartioLogo(float multiplier);
-    static MVector 	jitterPoint(int id, float freq, float offset, float jitterMag);
-    static float  	noiseAtValue( float x);
-    static void   	initTable( long seed );
+    static MString setExt(short extNum,bool write=false);
+    static void buildSupportedExtensionList(std::map<short,MString> &formatExtMap,bool write=false);
+    static void drawPartioLogo(float multiplier);
+    static MVector jitterPoint(int id, float freq, float offset, float jitterMag);
+    static float noiseAtValue( float x);
+    static void initTable( long seed );
 
+    static bool identifyPath(const MString &path, MString &dirname, MString &basename, MString &frame, MTime &t, MString &ext);
+    static unsigned long getFileList(const MString &path, CacheFiles &files);
     static unsigned long getFileList(const MString &dirname, const MString &basename, const MString &ext, CacheFiles &files);
     static void getFrameAndSubframe(double t, int &frame, int &subframe, int subFramePadding=3);
-    static CacheFiles::const_iterator closestCacheFile(MTime t, const CacheFiles &files);
+
+    enum FindMode
+    {
+        FM_EXACT = 0,
+        FM_CLOSEST,
+        FM_PREV,
+        FM_NEXT
+    };
+    static bool findCacheFile(const CacheFiles &files, FindMode mode, MTime t,
+                              CacheFiles::const_iterator &it);
+    static bool findCacheFile(CacheFiles &files, FindMode mode, MTime t,
+                              CacheFiles::iterator &it);
 
 private:
 
