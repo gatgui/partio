@@ -199,7 +199,7 @@ private:
     MStringArray attributeList;
     bool drawError;
     partio4Maya::CacheFiles mCacheFiles;
-
+    double mLastOffset;
 
 protected:
 

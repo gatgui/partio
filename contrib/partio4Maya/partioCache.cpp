@@ -1,6 +1,5 @@
 #include "partioCache.h"
 
-
 template <typename PT, int D, typename MT>
 struct ArrayWriter
 {
@@ -172,9 +171,9 @@ MString PartioCache::extension()
 
 MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMode mode)
 {
-#ifdef _DEBUG
+//#ifdef _DEBUG
    MGlobal::displayInfo("PartioCache open \"" + fileName + MString("\" ") + (mode == MPxCacheFormat::kRead ? "R" : (mode == MPxCacheFormat::kWrite ? "W" : "RW")));
-#endif
+//#endif
 
    bool success = true;
 
@@ -314,15 +313,32 @@ MStatus PartioCache::readHeader()
       frm = frm.substr(0, p);
    }
 
-   // Frame should end with Frame%d
-   MString pattern = mBasenameNoExt + "Frame%d";
-   int frame = -1;
-   if (sscanf(frm.c_str(), pattern.asChar(), &frame) == 1 && frame != -1)
+   // Frame should end with Frame%d or Frame%dTick%d
+   p = frm.rfind("Frame");
+   if (p != std::string::npos)
    {
+      frm = frm.substr(p);
+   }
+
+   int frame = -1;
+   int ticks = -1;
+   int rv = sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
+
+   if (rv == 2)
+   {
+      MTime targetTime(double(frame) + ticks * MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit()), MTime::uiUnit());
 #ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + frame);
+      MGlobal::displayInfo(MString("  Frame ") + frame + ", Tick " + ticks + " -> " + targetTime.value());
 #endif
+      mCurSample = mCacheFiles.find(targetTime);
+      return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
+   }
+   else if (rv == 1)
+   {
       MTime targetTime(double(frame), MTime::uiUnit());
+#ifdef _DEBUG
+      MGlobal::displayInfo(MString("  Frame ") + frame + " -> " + targetTime.value());
+#endif
       mCurSample = mCacheFiles.find(targetTime);
       return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
    }
@@ -675,7 +691,7 @@ MStatus PartioCache::writeHeader(const MString &version, MTime &startTime, MTime
       frm = frm.substr(0, p);
    }
 
-   // Frame should end with Frame%d
+   // Frame should end with Frame%d or Frame%dTick%d
    p = frm.rfind("Frame");
    if (p != std::string::npos)
    {
@@ -686,27 +702,23 @@ MStatus PartioCache::writeHeader(const MString &version, MTime &startTime, MTime
       frm = frm.substr(p);
    }
 
-   MString pattern = "Frame%d";
    int frame = -1;
-   if (sscanf(frm.c_str(), pattern.asChar(), &frame) == 1 && frame != -1)
+   int ticks = -1;
+   int rv = sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
+
+   if (rv == 2)
+   {
+#ifdef _DEBUG
+      MGlobal::displayInfo(MString("  Frame ") + frame + ", Tick " + ticks);
+#endif
+      mWTime = MTime(double(frame) + ticks * MTime(1, MTime::k6000FPS).asUnits(MTime::uiUnit()), MTime::uiUnit());
+   }
+   else if (rv == 1)
    {
 #ifdef _DEBUG
       MGlobal::displayInfo(MString("  Frame ") + frame);
 #endif
-      MTime targetTime(double(frame), MTime::uiUnit());
-      mWTime = targetTime;
-
-      mCurSample = mCacheFiles.find(targetTime);
-      if (mCurSample == mCacheFiles.end())
-      {
-         char fext[256];
-         sprintf(fext, ".%04d.%s", frame, mExt.asChar());
-         MString filename = mDirname + mBasenameNoExt  + fext;
-         mCacheFiles[targetTime] = filename;
-         mCurSample = mCacheFiles.find(targetTime);
-      }
-
-      return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
+      mWTime = MTime(double(frame), MTime::uiUnit());
    }
    else
    {
@@ -715,6 +727,27 @@ MStatus PartioCache::writeHeader(const MString &version, MTime &startTime, MTime
 #endif
       return MStatus::kFailure;
    }
+
+   mCurSample = mCacheFiles.find(mWTime);
+   if (mCurSample == mCacheFiles.end())
+   {
+      char fext[256];
+      if (ticks != -1)
+      {
+         double tickframes = MTime(1, MTime::k6000FPS).asUnits(MTime::uiUnit());
+         int subframe = int(floor(ticks * tickframes * 1000 + 0.5));
+         sprintf(fext, ".%04d.%03d.%s", frame, subframe, mExt.asChar());
+      }
+      else
+      {
+         sprintf(fext, ".%04d.%s", frame, mExt.asChar());
+      }
+      MString filename = mDirname + mBasenameNoExt  + fext;
+      mCacheFiles[mWTime] = filename;
+      mCurSample = mCacheFiles.find(mWTime);
+   }
+
+   return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
 }
 
 void PartioCache::beginWriteChunk()
@@ -927,6 +960,9 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
       }
    }
 
+   MTime cstart(floor(start.value()), MTime::uiUnit());
+   //MTime cend(ceil(end.value()), MTime::uiUnit());
+
 #ifdef _DEBUG
    MGlobal::displayInfo(MString("  Cache range: ") + start.value() + "-" + end.value());
 #endif
@@ -941,10 +977,22 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
       return MStatus::kFailure;
    }
    
+   // for the channels
    MTime srate(1.0, MTime::uiUnit());
+   if (mCacheFiles.size() > 2)
+   {
+      // Suppose sequence was uniformly sampled
+      // Beware though that because of maya precision, 0.25 will turn into 0.248 or 0.252 for an original
+      //   frame step of 0.25 at 24fps
+      // Worst, the way nCache works, the inprecision in the time step seems to accumulate as frame number grows bigger...
+      partio4Maya::CacheFiles::iterator it1 = mCacheFiles.begin();
+      partio4Maya::CacheFiles::iterator it2 = it1;
+      ++it2;
+      //srate = it2->first - it1->first;
+   }
 
    desc.setDistribution(MCacheFormatDescription::kOneFilePerFrame);
-   desc.setTimePerFrame(srate);
+   desc.setTimePerFrame(MTime(1, MTime::uiUnit()));
    desc.addDescriptionInfo("PartIO cache ." + mExt);
 
    for (int i=0; i<pinfo->numAttributes(); ++i)
@@ -967,24 +1015,26 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
          switch (pattr.type)
          {
          case Partio::INT:
-            desc.addChannel(name, name, MCacheFormatDescription::kInt32Array, MCacheFormatDescription::kRegular, srate, start, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kInt32Array, MCacheFormatDescription::kRegular, srate, cstart, end);
             break;
          case Partio::FLOAT:
-            desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, start, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, cstart, end);
             break;
          case Partio::VECTOR:
-            desc.addChannel(name, name, MCacheFormatDescription::kDoubleVectorArray, MCacheFormatDescription::kRegular, srate, start, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kDoubleVectorArray, MCacheFormatDescription::kRegular, srate, cstart, end);
             break;
          case Partio::INDEXEDSTR:
          default:
-            //desc.addChannel(name, name, MCacheFormatDescription::kUnknownData, MCacheFormatDescription::kRegular, srate, start, end);
+            //desc.addChannel(name, name, MCacheFormatDescription::kUnknownData, MCacheFormatDescription::kRegular, srate, cstart, end);
             continue;
          }
       }
    }
 
    // at last, add count attribute
-   desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, start, end);
+   // round start and end to full frames 
+   desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, cstart, end);
+   //desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, start, end);
    
    pinfo->release();
 

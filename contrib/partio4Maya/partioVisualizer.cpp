@@ -110,7 +110,8 @@ partioVisualizer::partioVisualizer()
       mLastRadius(1.0),
       mFlipped(false),
       frameChanged(false),
-      drawError(false)
+      drawError(false),
+      mLastOffset(0)
 {
     pvCache.particles = NULL;
     pvCache.flipPos = (float *) malloc(sizeof(float));
@@ -174,6 +175,7 @@ void partioVisualizer::initCallback()
     MPlug(tmo,aSize).getValue(multiplier);
     MPlug(tmo,aInvertAlpha).getValue(mLastInvertAlpha);
     MPlug(tmo,aCacheStatic).getValue(mLastStatic);
+    MPlug(tmo,aCacheOffset).getValue(mLastOffset);
     cacheChanged = false;
 
 }
@@ -227,7 +229,7 @@ MStatus partioVisualizer::initialize()
     tAttr.setConnectable ( true );
     tAttr.setStorable ( true );
 
-    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kInt, 0, &stat );
+    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kDouble, 0, &stat );
     nAttr.setKeyable(true);
 
     aCacheStatic = nAttr.create("staticCache", "statC", MFnNumericData::kBoolean, false, &stat);
@@ -395,7 +397,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         MString cacheDir = block.inputValue(aCacheDir).asString();
         MString cacheFile = block.inputValue(aCacheFile).asString();
         bool cacheStatic = block.inputValue( aCacheStatic ).asBool();
-        /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+        double cacheOffset = block.inputValue( aCacheOffset ).asDouble();
         /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
         MFloatVector defaultColor = block.inputValue( aDefaultPointColor ).asFloatVector();
         float defaultAlpha = block.inputValue( aDefaultAlpha ).asFloat();
@@ -405,6 +407,8 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         MTime t = block.inputValue(time).asTime();
         bool flipYZ = block.inputValue( aFlipYZ ).asBool();
         MString renderCachePath = block.inputValue( aRenderCachePath ).asString();
+
+        t = MTime(t.value() + cacheOffset, MTime::uiUnit());
 
         MString frameString;
         MString formatExt;
@@ -449,7 +453,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
 
         partio4Maya::CacheFiles::const_iterator it;
 
-        if (mCacheFiles.size() == 0)
+        if (cacheStatic || mCacheFiles.size() == 0)
         {
             newCacheFile = cacheDir + "/" + cacheFile;
         }
@@ -469,6 +473,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
             mLastFile != cacheFile ||
             mLastFlipStatus != flipYZ ||
             mLastStatic != cacheStatic ||
+            mLastOffset != cacheOffset ||
             forceReload)
         {
             cacheChanged = true;
@@ -477,6 +482,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
             mLastFile = cacheFile;
             mLastFlipStatus = flipYZ;
             mLastStatic = cacheStatic;
+            mLastOffset = cacheOffset;
             mFlipped = false;
             block.outputValue(aForceReload).setBool(false);
         }

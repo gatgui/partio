@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MFnPlugin.h>
 
 #define REGISTER_CACHE_FORMAT(n)\
-    if (n >= 0 && n < Partio::numReadFormats())\
+    if (n >= 0 && n < PartioCache::TotalNumFormats())\
     {\
         status = plugin.registerCacheFormat(MString("partio-")+PartioCache::FormatExtension(n), PartioCache::Create<n>);\
         if (!status)\
@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
     }
 
 #define DEREGISTER_CACHE_FORMAT(n)\
-    if (n >= 0 && n < Partio::numReadFormats())\
+    if (n >= 0 && n < PartioCache::TotalNumFormats())\
     {\
         status = plugin.deregisterCacheFormat(MString("partio-")+PartioCache::FormatExtension(n));\
         if (!status)\

@@ -152,7 +152,9 @@ partioInstancer::partioInstancer()
       mLastScaleFromIndex(-1),
       mLastLastScaleFromIndex(-1),
       mLastIndexFromIndex(-1),
-      canMotionBlur(false)
+      canMotionBlur(false),
+      mLastStatic(false),
+      mLastOffset(0)
 {
     pvCache.particles = NULL;
     pvCache.flipPos = (float *) malloc(sizeof(float));
@@ -210,6 +212,8 @@ void partioInstancer::initCallback()
     MPlug(tmo,aCacheDir).getValue(mLastPath);
     MPlug(tmo,aCacheFile).getValue(mLastFile);
     MPlug(tmo,aSize).getValue(multiplier);
+    MPlug(tmo,aCacheStatic).getValue(mLastStatic);
+    MPlug(tmo,aCacheOffset).getValue(mLastOffset);
     cacheChanged = false;
 
 }
@@ -254,7 +258,7 @@ MStatus partioInstancer::initialize()
     tAttr.setConnectable ( true );
     tAttr.setStorable ( true );
 
-    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kInt, 0, &stat );
+    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kDouble, 0, &stat );
     nAttr.setKeyable(true);
 
     aCacheStatic = nAttr.create("staticCache", "statC", MFnNumericData::kBoolean, false, &stat);
@@ -505,14 +509,16 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
         MString cacheDir = block.inputValue(aCacheDir).asString();
         MString cacheFile = block.inputValue(aCacheFile).asString();
         MString renderCachePath = block.inputValue( aRenderCachePath ).asString();
-        /*bool cacheStatic =*/ block.inputValue( aCacheStatic ).asBool();
-        /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+        bool cacheStatic = block.inputValue( aCacheStatic ).asBool();
+        double cacheOffset = block.inputValue( aCacheOffset ).asDouble();
         /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
         bool forceReload = block.inputValue( aForceReload ).asBool();
         MTime inputTime = block.inputValue( time ).asTime();
         bool flipYZ = block.inputValue( aFlipYZ ).asBool();
         bool computeMotionBlur = block.inputValue( aComputeVeloPos ).asBool();
         float veloMult = block.inputValue ( aVeloMult ).asFloat();
+
+        inputTime = MTime(inputTime.value() + cacheOffset, MTime::uiUnit());
 
         if (cacheDir == "" || cacheFile == "" )
         {
@@ -553,7 +559,11 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
         partio4Maya::CacheFiles::const_iterator fit;
         
         // if file doesn't exists, get previous or next, and interpolate using velocity
-        if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, inputTime, fit))
+        if (cacheStatic)
+        {
+            newCacheFile = cacheDir + "/" + cacheFile;
+        }
+        else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, inputTime, fit))
         {
             newCacheFile = fit->second;
             deltaTime = float(inputTime.value() - fit->first.value());
@@ -568,7 +578,13 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 
 //////////////////////////////////////////////
 /// Cache can change manually by changing one of the parts of the cache input...
-        if (mLastExt != formatExt || mLastPath != cacheDir || mLastFile != cacheFile || mLastFlipStatus  != flipYZ || forceReload)
+        if (mLastExt != formatExt ||
+            mLastPath != cacheDir ||
+            mLastFile != cacheFile ||
+            mLastFlipStatus  != flipYZ ||
+            mLastStatic != cacheStatic ||
+            mLastOffset != cacheOffset ||
+            forceReload)
         {
             cacheChanged = true;
             mFlipped = false;
@@ -576,6 +592,8 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             mLastExt = formatExt;
             mLastPath = cacheDir;
             mLastFile = cacheFile;
+            mLastStatic = cacheStatic;
+            mLastOffset = cacheOffset;
             block.outputValue(aForceReload).setBool(false);
         }
 

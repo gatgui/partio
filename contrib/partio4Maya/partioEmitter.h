@@ -134,6 +134,8 @@ private:
     MString mLastExt;
     bool cacheChanged;
     partio4Maya::CacheFiles mCacheFiles;
+    bool mLastStatic;
+    double mLastOffset;
 };
 
 /// inlines

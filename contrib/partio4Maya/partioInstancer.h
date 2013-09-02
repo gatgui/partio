@@ -249,6 +249,8 @@ private:
 //    int mLastShaderIndexFromIndex;
     bool canMotionBlur;
     partio4Maya::CacheFiles mCacheFiles;
+    bool mLastStatic;
+    double mLastOffset;
 
 protected:
 

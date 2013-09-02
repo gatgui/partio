@@ -69,7 +69,9 @@ partioEmitter::partioEmitter():
         mLastPath(""),
         mLastFile(""),
         mLastExt(""),
-        cacheChanged(false)
+        cacheChanged(false),
+        mLastStatic(false),
+        mLastOffset(0)
 {
 }
 
@@ -111,6 +113,8 @@ void partioEmitter::initCallback()
 
     MPlug(tmo, aCacheDir).getValue(mLastPath);
     MPlug(tmo, aCacheFile).getValue(mLastFile);
+    MPlug(tmo, aCacheStatic).getValue(mLastStatic);
+    MPlug(tmo, aCacheOffset).getValue(mLastOffset);
     cacheChanged = false;
 }
 
@@ -166,7 +170,7 @@ MStatus partioEmitter::initialize()
     tAttr.setConnectable ( true );
     tAttr.setStorable ( true );
 
-    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kInt, 0, &status );
+    aCacheOffset = nAttr.create("cacheOffset", "coff", MFnNumericData::kDouble, 0, &status );
     nAttr.setKeyable(true);
 
     aCacheActive = nAttr.create("cacheActive", "cAct", MFnNumericData::kBoolean, 1, &status);
@@ -252,12 +256,12 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
         return MS::kSuccess;
     }
 
-    /*int cacheOffset =*/ block.inputValue( aCacheOffset ).asInt();
+    double cacheOffset = block.inputValue( aCacheOffset ).asDouble();
     /*short cacheFormat =*/ block.inputValue( aCacheFormat ).asShort();
     float jitterPos = block.inputValue( aJitterPos ).asFloat();
     float jitterFreq = block.inputValue( aJitterFreq ).asFloat();
     bool useEmitterTxfm = block.inputValue( aUseEmitterTransform ).asBool();
-    /*bool cacheStatic =*/ block.inputValue( aCacheStatic ).asBool();
+    bool cacheStatic = block.inputValue( aCacheStatic ).asBool();
     MString cacheDir = block.inputValue(aCacheDir).asString();
     MString cacheFile = block.inputValue(aCacheFile).asString();
 
@@ -372,17 +376,29 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     map<int, int> particleIDMap;
     cacheChanged = false;
 
-    if (mLastExt != formatExt || mLastPath != cacheDir || mLastFile != cacheFile)
+    if (mLastExt != formatExt ||
+        mLastPath != cacheDir ||
+        mLastFile != cacheFile ||
+        mLastStatic != cacheStatic ||
+        mLastOffset != cacheOffset)
     {
         cacheChanged = true;
         mLastExt = formatExt;
         mLastPath = cacheDir;
         mLastFile = cacheFile;
+        mLastOffset = cacheOffset;
+        mLastStatic = cacheStatic;
     }
+
+    cT = MTime(cT.value() + cacheOffset, MTime::uiUnit());
 
     partio4Maya::CacheFiles::const_iterator fit;
     
-    if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, cT, fit))
+    if (cacheStatic)
+    {
+        newCacheFile = cacheDir + "/" + cacheFile;
+    }
+    else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, cT, fit))
     {
         newCacheFile = fit->second;
         deltaTime = float(cT.value() - fit->first.value());
