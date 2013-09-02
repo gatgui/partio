@@ -1,4 +1,5 @@
 #include "partioCache.h"
+#include <maya/MAnimControl.h>
 
 template <typename PT, int D, typename MT>
 struct ArrayWriter
@@ -171,16 +172,28 @@ MString PartioCache::extension()
 
 MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMode mode)
 {
-//#ifdef _DEBUG
+#ifdef _DEBUG
    MGlobal::displayInfo("PartioCache open \"" + fileName + MString("\" ") + (mode == MPxCacheFormat::kRead ? "R" : (mode == MPxCacheFormat::kWrite ? "W" : "RW")));
-//#endif
+   MTime curTime = MAnimControl::currentTime();
+   MGlobal::displayInfo(MString("  current time: ") + curTime.value());
+#endif
 
    bool success = true;
 
    bool samefile = (fileName == mFilename);
    if (samefile)
    {
+#ifdef _DEBUG
+      MGlobal::displayInfo("  Re-use last sample");
+#endif
       mCurSample = mLastSample;
+   }
+   else
+   {
+#ifdef _DEBUG
+      MGlobal::displayInfo("  Reset last sample");
+#endif
+      mLastSample = mCacheFiles.end();
    }
 
    mFilename = fileName;
@@ -324,11 +337,17 @@ MStatus PartioCache::readHeader()
    int ticks = -1;
    int rv = sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
 
+   // Beware: this won't work if cache time has an offset or scale
+   //         but I couldn't find a way to get back the right sample time from those
+   //         (because of maya limited time precision and the way nCache produce its samples)
+   MTime targetTime = MAnimControl::currentTime();
+   mCurSample = mCacheFiles.find(targetTime);
+   /*
    if (rv == 2)
    {
       MTime targetTime(double(frame) + ticks * MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit()), MTime::uiUnit());
 #ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + frame + ", Tick " + ticks + " -> " + targetTime.value());
+      MGlobal::displayInfo(MString("  Frame ") + double(frame) + ", Tick " + double(ticks) + " -> " + targetTime.value());
 #endif
       mCurSample = mCacheFiles.find(targetTime);
       return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
@@ -337,19 +356,20 @@ MStatus PartioCache::readHeader()
    {
       MTime targetTime(double(frame), MTime::uiUnit());
 #ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + frame + " -> " + targetTime.value());
+      MGlobal::displayInfo(MString("  Frame ") + double(frame) + " -> " + targetTime.value());
 #endif
       mCurSample = mCacheFiles.find(targetTime);
       return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
    }
-   else
-   {
+
 #ifdef _DEBUG
-      MGlobal::displayWarning("  Could not extract frame number");
+   MGlobal::displayWarning("  Could not extract frame number");
 #endif
-      mCurSample = mCacheFiles.end();
-      return MStatus::kFailure;
-   }
+   mCurSample = mCacheFiles.end();
+   return MStatus::kFailure;
+   */
+
+   return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
 }
 
 MStatus PartioCache::beginReadChunk()
@@ -972,7 +992,7 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
    if (!pinfo)
    {
 #ifdef _DEBUG
-      MGlobal::displayWarning("Could not read particle header for " + files[0]);
+      MGlobal::displayWarning("Could not read particle header for " + mCacheFiles.begin()->second);
 #endif
       return MStatus::kFailure;
    }
@@ -981,15 +1001,17 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
    MTime srate(1.0, MTime::uiUnit());
    if (mCacheFiles.size() > 2)
    {
-      // Suppose sequence was uniformly sampled
-      // Beware though that because of maya precision, 0.25 will turn into 0.248 or 0.252 for an original
-      //   frame step of 0.25 at 24fps
-      // Worst, the way nCache works, the inprecision in the time step seems to accumulate as frame number grows bigger...
+      // This pre-supposes that the cache has been uniformly sampled
+      // Beware though that because of maya time precision limitation
       partio4Maya::CacheFiles::iterator it1 = mCacheFiles.begin();
       partio4Maya::CacheFiles::iterator it2 = it1;
       ++it2;
-      //srate = it2->first - it1->first;
+      // If we do not set srate, sub-samples won't be queried...
+      srate = it2->first - it1->first;
    }
+
+   mStart = cstart;
+   mSamplRate = srate;
 
    desc.setDistribution(MCacheFormatDescription::kOneFilePerFrame);
    desc.setTimePerFrame(MTime(1, MTime::uiUnit()));
