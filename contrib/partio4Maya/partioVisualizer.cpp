@@ -506,7 +506,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         {
             cacheChanged = true;
             mFlipped = false;
-            MGlobal::displayWarning(MString("PartioVisualizer->Loading: " + newCacheFile));
+            //MGlobal::displayWarning(MString("PartioVisualizer->Loading: " + newCacheFile));
             pvCache.particles = 0; // resets the particles
 
             pvCache.particles = read(newCacheFile.asChar());
@@ -517,9 +517,9 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
                 return (MS::kSuccess);
             }
 
-            char partCount[50];
-            sprintf (partCount, "%d", pvCache.particles->numParticles());
-            MGlobal::displayInfo(MString ("PartioVisualizer-> LOADED: ") + partCount + MString (" particles"));
+            //char partCount[50];
+            //sprintf (partCount, "%d", pvCache.particles->numParticles());
+            //MGlobal::displayInfo(MString ("PartioVisualizer-> LOADED: ") + partCount + MString (" particles"));
 
             float * floatToRGB = (float *) realloc(pvCache.rgb, pvCache.particles->numParticles()*sizeof(float)*3);
             if (floatToRGB != NULL)

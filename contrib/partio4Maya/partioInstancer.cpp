@@ -613,7 +613,7 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 
             char partCount[50];
             sprintf (partCount, "%d", pvCache.particles->numParticles());
-            MGlobal::displayInfo(MString ("PartioInstancer-> LOADED: ") + partCount + MString (" particles"));
+            //MGlobal::displayInfo(MString ("PartioInstancer-> LOADED: ") + partCount + MString (" particles"));
             block.outputValue(aForceReload).setBool(false);
             block.setClean(aForceReload);
 

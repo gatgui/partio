@@ -139,9 +139,11 @@ global proc int pioAEassignCacheFileCB( string $fileAttribute,
     string $ext = fileExtension($baseFileName);
     int $hasframe = 0;
 
-    if (size(match("[._][0-9]+[._][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+    if (size(match("[.][0-9]+[.][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+        size(match("_[0-9]+_[0-9]+[.]"+$ext, $baseFileName)) > 0 ||
         size(match("Frame[0-9]+Tick[0-9]+[.]"+$ext, $baseFileName)) > 0 || 
-        size(match("[._][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+        size(match("[.][0-9]+[.]"+$ext, $baseFileName)) > 0 ||
+        size(match("_[0-9]+[.]"+$ext, $baseFileName)) > 0 ||
         size(match("Frame[0-9]+[.]"+$ext, $baseFileName)) > 0)
     {
         $hasframe = 1;

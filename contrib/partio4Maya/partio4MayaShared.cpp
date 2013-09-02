@@ -185,17 +185,20 @@ public:
     
     static regex_t Pattern1;
     static regex_t Pattern2;
+    static regex_t Pattern3;
     
     FramePatterns()
     {
-        regcomp(&Pattern1, "[._]([0-9]+)([._]([0-9]+))?$", REG_EXTENDED);
-        regcomp(&Pattern2, "Frame([0-9]+)(Tick([0-9]+))?$", REG_EXTENDED);
+        regcomp(&Pattern1, "[.]([0-9]+)([.]([0-9]+))?$", REG_EXTENDED);
+        regcomp(&Pattern2, "_([0-9]+)(_([0-9]+))?$", REG_EXTENDED);
+        regcomp(&Pattern3, "Frame([0-9]+)(Tick([0-9]+))?$", REG_EXTENDED);
     }
     
     ~FramePatterns()
     {
         regfree(&Pattern1);
         regfree(&Pattern2);
+        regfree(&Pattern3);
     }
 };
 
@@ -219,6 +222,7 @@ int regsearch(regex_t *re, const char *str, size_t nmatch, regmatch_t *pmatch, i
 
 regex_t FramePatterns::Pattern1;
 regex_t FramePatterns::Pattern2;
+regex_t FramePatterns::Pattern3;
 
 static FramePatterns _framePatterns;
 
@@ -263,7 +267,8 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
     
     
     // .rm.so/.rm_eo (== -> empty string, -1 -> no match)
-    if (regsearch(&FramePatterns::Pattern1, basename.asChar(), 8, m, 0) == 0)
+    if (regsearch(&FramePatterns::Pattern1, basename.asChar(), 8, m, 0) == 0 ||
+        regsearch(&FramePatterns::Pattern2, basename.asChar(), 8, m, 0) == 0)
     {
         double tval = 0;
         MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
@@ -274,11 +279,17 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
             frm += basename.substringW(m[3].rm_so, m[3].rm_eo-1);
         }
         sscanf(frm.asChar(), "%lf", &tval);
+        if (ext == "pdc")
+        {
+            //double ticksPerFrame = 1.0 / MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
+            //tval /= ticksPerFrame;
+            tval *= MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
+        }
         t.setValue(tval);
         frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
         basename = basename.substringW(0, m[0].rm_so);
     }
-    else if (regsearch(&FramePatterns::Pattern2, basename.asChar(), 8, m, 0) == 0)
+    else if (regsearch(&FramePatterns::Pattern3, basename.asChar(), 8, m, 0) == 0)
     {
         double tval = 0;
         MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
@@ -301,7 +312,7 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
         frame = "";
     }
     
-    //MGlobal::displayInfo("identifyPath(" + path + "): dirname=" + dirname + ", basename=" + basename + ", frame=" + frame + ", ext=" + ext);
+    MGlobal::displayInfo("partio4Maya::identifyPath: \"" + path + "\" -> dirname=" + dirname + ", basename=" + basename + ", frame=" + frame + ", ext=" + ext + ", time=" + t.value());
     
     return (frame.length() > 0);
 }
@@ -317,8 +328,6 @@ unsigned long partio4Maya::getFileList(const MString &path, partio4Maya::CacheFi
 
 unsigned long partio4Maya::getFileList(const MString &dirname, const MString &basename, const MString &ext, partio4Maya::CacheFiles &files)
 {
-    double ticksPerFrame = 1.0 / MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
-
     MStringArray tmp;
 
     std::string dn = dirname.asChar();
@@ -352,10 +361,6 @@ unsigned long partio4Maya::getFileList(const MString &dirname, const MString &ba
     {
         if (identifyPath(tmp[i], _dn, _bn, _fn, t, _e))
         {
-            if (ext == "pdc")
-            {
-                t /= ticksPerFrame;
-            }
             files[t] = mdn + tmp[i];
         }
     }

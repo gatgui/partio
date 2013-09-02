@@ -398,7 +398,7 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
     //if ( cacheFile != "" && partioCacheExists(cacheFile.asChar()) && cacheFile != mLastFileLoaded)
     if ( newCacheFile != "" && partio4Maya::cacheExists(newCacheFile.asChar()))
     {
-        MGlobal::displayInfo(MString("partioEmitter->Loading: " + newCacheFile));
+        //MGlobal::displayInfo(MString("partioEmitter->Loading: ") + newCacheFile + " (delta: " + deltaTime + ")");
         ParticlesDataMutable* particles=0;
         ParticleAttribute IdAttribute;
         ParticleAttribute posAttribute;
@@ -777,7 +777,7 @@ MStatus partioEmitter::compute ( const MPlug& plug, MDataBlock& block )
             part.setPerParticleAttribute("lifespanPP", lifespans);
 
 
-            MGlobal::displayInfo (MString ("PartioEmitter->Emitting  ") + inPosArray.length() + MString( " new particles"));
+            //MGlobal::displayInfo (MString ("PartioEmitter->Emitting  ") + inPosArray.length() + MString( " new particles"));
             part.emit(inPosArray, inVelArray);
 
             part.setPerParticleAttribute("partioID", partioIDs);
