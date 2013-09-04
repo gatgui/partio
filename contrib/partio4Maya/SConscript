@@ -35,7 +35,9 @@ mayaenv.Append(CPPPATH=[mayaInc])
 mayaenv.Append(LIBPATH=[mayaLib])
 mayaenv.Append(LIBS=["OpenMaya", "Foundation", "OpenMayaAnim", "OpenMayaFX", "OpenMayaUI", "OpenMayaRender"])
 if sys.platform == "win32":
-    mayaenv.Append(CPPDEFINES=["NT_PLUGIN"])
+    # use regex
+    mayaenv.Append(CPPDEFINES=["NT_PLUGIN", "REGEX_STATIC"])
+    mayaenv.Append(CPPPATH=["../../gto/regex/src"])
     mayaenv.Append(LIBS=["opengl32", "glu32", "shell32"])
     pluginExt = ".mll"
 else:
