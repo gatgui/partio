@@ -85,14 +85,17 @@ if default_cxx == "g++":
     elif env["TYPE"] == "debug":
         env.Append(CXXFLAGS=" -fPIC -D_DEBUG -O0 -g -Wall -Werror -Wstrict-aliasing=0")
 elif default_cxx == "cl":
-    env.Append(CXXFLAGS=" /W3 /GR /EHsc /MD")
+    env.Append(CXXFLAGS=" /W3 /GR /EHsc")
     env.Append(CPPDEFINES=["_CRT_SECURE_NO_WARNINGS"])
     if env["TYPE"] == "optimize":
-        env.Append(CXXFLAGS=" /O2 /DNDEBUG")
+        env.Append(CXXFLAGS=" /O2 /MD /DNDEBUG")
+        env.Append(LINKFLAGS=" /release /incremental:no /opt:ref /opt:icf")
     elif env["TYPE"] == "profile":
-        env.Append(CXXFLAGS=" /Od /Zi /DNDEBUG")
+        env.Append(CXXFLAGS=" /Od /Zi /Gm /MD /DNDEBUG")
+        env.Append(LINKFLAGS=" /release /incremental /opt:noref /opt:noicf")
     elif env["TYPE"] == "debug":
-        env.Append(CXXFLAGS=" /Od /Zi /D_DEBUG")
+        env.Append(CXXFLAGS=" /Od /Zi /Gm /MDd /D_DEBUG")
+        env.Append(LINKFLAGS=" /debug /incremental")
 
 
 VariantDir(variant_build, '.', duplicate=0)

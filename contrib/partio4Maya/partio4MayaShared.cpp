@@ -270,42 +270,41 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
     if (regsearch(&FramePatterns::Pattern1, basename.asChar(), 8, m, 0) == 0 ||
         regsearch(&FramePatterns::Pattern2, basename.asChar(), 8, m, 0) == 0)
     {
-        double tval = 0;
-        MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
-        if (m[2].rm_so != -1)
+        frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
+        basename = basename.substringW(0, m[0].rm_so);
+#ifdef _DEBUG
+        MGlobal::displayInfo("partio4Maya::identifyPath: Frame pattern 1 or 2 (" + frame + ")");
+#endif
+        int idx = frame.rindexW('_');
+        if (idx != -1)
         {
-            // subframe optional group matched
-            frm += ".";
-            frm += basename.substringW(m[3].rm_so, m[3].rm_eo-1);
+            //frame[idx] = '.';
+            MString tmp = frame;
+            frame = tmp.substringW(0, idx-1);
+            frame += ".";
+            frame += tmp.substringW(idx+1, tmp.length()-1);
         }
-        sscanf(frm.asChar(), "%lf", &tval);
+        double tval = 0;
+        sscanf(frame.asChar(), "%lf", &tval);
         if (ext == "pdc")
         {
-            //double ticksPerFrame = 1.0 / MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
-            //tval /= ticksPerFrame;
             tval *= MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
         }
         t.setValue(tval);
-        frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
-        basename = basename.substringW(0, m[0].rm_so);
     }
     else if (regsearch(&FramePatterns::Pattern3, basename.asChar(), 8, m, 0) == 0)
     {
-        double tval = 0;
-        MString frm = basename.substringW(m[1].rm_so, m[1].rm_eo-1);
-        sscanf(frm.asChar(), "%lf", &tval);
-        if (m[2].rm_so != -1)
-        {
-            // subframe optional group matched
-            MTime tt(1, MTime::k6000FPS);
-            int ticks = 0;
-            frm = basename.substringW(m[3].rm_so, m[3].rm_eo-1);
-            sscanf(frm.asChar(), "%d", &ticks);
-            tval += ticks * tt.asUnits(MTime::uiUnit());
-        }
-        t.setValue(tval);
         frame = basename.substringW(m[0].rm_so+1, basename.length()-1);
         basename = basename.substringW(0, m[0].rm_so);
+#ifdef _DEBUG
+        MGlobal::displayInfo("partio4Maya::identifyPath: Frame pattern 3 (" + frame + ")");
+#endif
+        double tval = 0;
+        int iframe = 0, iticks = 0;
+        sscanf(frame.asChar(), "Frame%dTick%d", &iframe, &iticks);
+        tval = double(iframe) + iticks * MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit());
+        t.setValue(tval);
+        
     }
     else
     {

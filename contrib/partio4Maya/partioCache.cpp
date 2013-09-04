@@ -339,7 +339,7 @@ MStatus PartioCache::readHeader()
 
    int frame = -1;
    int ticks = -1;
-   int rv = sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
+   /*int rv =*/ sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
 
    // Beware: this won't work if cache time has an offset or scale
    //         but I couldn't find a way to get back the right sample time from those
