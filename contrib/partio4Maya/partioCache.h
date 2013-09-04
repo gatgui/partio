@@ -118,6 +118,7 @@ private:
    Partio::ParticleAttribute mRAttr;
    MTime mStart;
    MTime mSamplRate;
+   MTime mLastTime;
 
    static std::vector<const char*> msAllFormats;
 };

@@ -116,6 +116,7 @@ PartioCache::PartioCache(const MString &ext)
    , mExt(ext)
    , mRData(0)
    , mWData(0)
+   , mLastTime(-1000.0)
 {
 #ifdef _DEBUG
    MGlobal::displayInfo("Create PartioCache \"" + mExt + "\"");
@@ -172,15 +173,16 @@ MString PartioCache::extension()
 
 MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMode mode)
 {
+   MTime curTime = MAnimControl::currentTime();
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache open \"" + fileName + MString("\" ") + (mode == MPxCacheFormat::kRead ? "R" : (mode == MPxCacheFormat::kWrite ? "W" : "RW")));
-   MTime curTime = MAnimControl::currentTime();
    MGlobal::displayInfo(MString("  current time: ") + curTime.value());
 #endif
 
    bool success = true;
 
-   bool samefile = (fileName == mFilename);
+   //bool samefile = (fileName == mFilename);
+   bool samefile = (curTime == mLastTime);
    if (samefile)
    {
 #ifdef _DEBUG
@@ -198,6 +200,7 @@ MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMod
 
    mFilename = fileName;
    mMode = mode;
+   mLastTime = curTime;
 
    // if we are opening the same file, only check if it is valid, else readHeader (to select current sample)
    //if ((samefile && isValid()) || (readHeader() == MStatus::kSuccess))
@@ -299,6 +302,7 @@ void PartioCache::clean()
    mMode = MPxCacheFormat::kRead;
    mCacheFiles.clear();
    mLastSample = mCacheFiles.end();
+   mLastTime.setValue(-1000.0);
 }
 
 MStatus PartioCache::readHeader()
@@ -1003,11 +1007,31 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
    {
       // This pre-supposes that the cache has been uniformly sampled
       // Beware though that because of maya time precision limitation
+
+      double accumsteps = 0.0;
+      int nsteps = 0;
+
       partio4Maya::CacheFiles::iterator it1 = mCacheFiles.begin();
       partio4Maya::CacheFiles::iterator it2 = it1;
       ++it2;
+      while (it2 != mCacheFiles.end())
+      {
+         accumsteps += (it2->first.value() - it1->first.value());
+         ++nsteps;
+         it1 = it2;
+         ++it2;
+      }
+
+#ifdef _DEBUG
+      MGlobal::displayInfo(MString("  Average sample step: ") + (accumsteps / nsteps));
+#endif
+
       // If we do not set srate, sub-samples won't be queried...
-      srate = it2->first - it1->first;
+      srate = (accumsteps / nsteps);
+
+#ifdef _DEBUG
+      MGlobal::displayInfo(MString("  -> rate = ") + srate.value());
+#endif
    }
 
    mStart = cstart;
@@ -1053,8 +1077,7 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
       }
    }
 
-   // at last, add count attribute
-   // round start and end to full frames 
+   // At last, add count attribute
    desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, cstart, end);
    //desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, start, end);
    
