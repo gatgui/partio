@@ -116,7 +116,6 @@ PartioCache::PartioCache(const MString &ext)
    , mExt(ext)
    , mRData(0)
    , mWData(0)
-   , mLastTime(-1000.0)
 {
 #ifdef _DEBUG
    MGlobal::displayInfo("Create PartioCache \"" + mExt + "\"");
@@ -137,33 +136,9 @@ PartioCache::~PartioCache()
 MStatus PartioCache::isValid()
 {
 #ifdef _DEBUG
-   MGlobal::displayInfo(MString("PartioCache isValid: ") + (mCurSample != mCacheFiles.end() ? "true" : "false"));
+   MGlobal::displayInfo(MString("PartioCache isValid: ") + (mCacheFiles.size() > 0 ? "true" : "false"));
 #endif
-   return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
-}
-
-MStatus PartioCache::rewind()
-{
-   // This should be a NOOP as we have one file per sample
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache rewind");
-#endif
-   if (mCacheFiles.size() > 0)
-   {
-      close();
-      if (!open(mFilename, mMode))
-      {
-         return MStatus::kFailure;
-      }
-      else
-      {
-         return MStatus::kSuccess;
-      }
-   }
-   else
-   {
-      return MStatus::kFailure;
-   }
+   return (mCacheFiles.size() > 0 ? MStatus::kSuccess : MStatus::kFailure);
 }
 
 MString PartioCache::extension()
@@ -173,63 +148,31 @@ MString PartioCache::extension()
 
 MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMode mode)
 {
-   MTime curTime = MAnimControl::currentTime();
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache open \"" + fileName + MString("\" ") + (mode == MPxCacheFormat::kRead ? "R" : (mode == MPxCacheFormat::kWrite ? "W" : "RW")));
-   MGlobal::displayInfo(MString("  current time: ") + curTime.value());
 #endif
 
    bool success = true;
 
-   //bool samefile = (fileName == mFilename);
-   bool samefile = (curTime == mLastTime);
-   if (samefile)
-   {
-#ifdef _DEBUG
-      MGlobal::displayInfo("  Re-use last sample");
-#endif
-      mCurSample = mLastSample;
-   }
-   else
-   {
-#ifdef _DEBUG
-      MGlobal::displayInfo("  Reset last sample");
-#endif
-      mLastSample = mCacheFiles.end();
-   }
-
-   mFilename = fileName;
-   mMode = mode;
-   mLastTime = curTime;
-
-   // if we are opening the same file, only check if it is valid, else readHeader (to select current sample)
-   //if ((samefile && isValid()) || (readHeader() == MStatus::kSuccess))
-   if (!samefile || isValid())
+   if (fileName != mFilename)
    {
       if (mode == MPxCacheFormat::kRead)
       {
-         if (!samefile)
-         {
-            success = success && (readHeader() == MStatus::kSuccess);
-         }
-         success = success && (Partio::readFormatIndex(mExt.asChar()) != Partio::InvalidIndex && mCacheFiles.size() > 0);
+         success = (Partio::readFormatIndex(mExt.asChar()) != Partio::InvalidIndex && mCacheFiles.size() > 0);
       }
       else if (mode == MPxCacheFormat::kWrite)
       {
-         // Do not try to read header
          success = (Partio::writeFormatIndex(mExt.asChar()) != Partio::InvalidIndex);
       }
       else
       {
-         // Read/Write
-         // Try to read header but do not fail if file doesn't exists
-         if (!samefile)
-         {
-            readHeader();
-         }
-         success = success && (Partio::writeFormatIndex(mExt.asChar()) != Partio::InvalidIndex && Partio::readFormatIndex(mExt.asChar()) != Partio::InvalidIndex);
+         success = (Partio::writeFormatIndex(mExt.asChar()) != Partio::InvalidIndex && Partio::readFormatIndex(mExt.asChar()) != Partio::InvalidIndex);
       }
    }
+
+   mFilename = fileName;
+   mMode = mode;
+   mCurSample = mCacheFiles.end();
 
 #ifdef _DEBUG
    MGlobal::displayInfo(success ? "  Open succeeded" : "  Open failed");
@@ -238,31 +181,38 @@ MStatus PartioCache::open(const MString &fileName, MPxCacheFormat::FileAccessMod
    return (success ? MStatus::kSuccess : MStatus::kFailure);
 }
 
+MStatus PartioCache::rewind()
+{
+#ifdef _DEBUG
+   MGlobal::displayInfo("PartioCache rewind");
+#endif
+   if (mCacheFiles.size() > 0)
+   {
+      mCurSample = mCacheFiles.begin();
+      return MStatus::kSuccess;
+   }
+   else
+   {
+      return MStatus::kFailure;
+   }
+}
+
 void PartioCache::close()
 {
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache close");
 #endif
    mCurSample = mCacheFiles.end();
-   //resetWriteAttr();
-   //resetReadAttr();
-   //resetPartioData();
 }
 
 void PartioCache::resetWriteAttr()
 {
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache resetWriteAttr");
-#endif
    mWChan = "";
    mWTime = 0.0;
 }
 
 void PartioCache::resetReadAttr()
 {
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache resetReadAttr");
-#endif
    mRAttrIdx = -1;
    mRAttr.type = Partio::NONE;
    mRAttr.attributeIndex = -1;
@@ -272,9 +222,6 @@ void PartioCache::resetReadAttr()
 
 void PartioCache::resetPartioData()
 {
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache resetPartioData");
-#endif
    if (mRData)
    {
       mRData->release();
@@ -291,9 +238,6 @@ void PartioCache::resetPartioData()
 
 void PartioCache::clean()
 {
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache clean");
-#endif
    close();
    resetPartioData();
    mFilename = "";
@@ -302,7 +246,7 @@ void PartioCache::clean()
    mMode = MPxCacheFormat::kRead;
    mCacheFiles.clear();
    mLastSample = mCacheFiles.end();
-   mLastTime.setValue(-1000.0);
+   mChannels.clear();
 }
 
 MStatus PartioCache::readHeader()
@@ -311,69 +255,7 @@ MStatus PartioCache::readHeader()
    MGlobal::displayInfo("PartioCache readHeader");
 #endif
 
-   close();
-   
-   // set mCurSample
-   std::string frm = mFilename.asChar();
-   
-   // Strip directory
-   size_t p = frm.find_last_of("\\/");
-   if (p != std::string::npos)
-   {
-      frm = frm.substr(p+1);
-   }
-
-   // Strip extension
-   p = frm.rfind('.');
-   if (p != std::string::npos)
-   {
-      frm = frm.substr(0, p);
-   }
-
-   // Frame should end with Frame%d or Frame%dTick%d
-   p = frm.rfind("Frame");
-   if (p != std::string::npos)
-   {
-      frm = frm.substr(p);
-   }
-
-   int frame = -1;
-   int ticks = -1;
-   /*int rv =*/ sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
-
-   // Beware: this won't work if cache time has an offset or scale
-   //         but I couldn't find a way to get back the right sample time from those
-   //         (because of maya limited time precision and the way nCache produce its samples)
-   MTime targetTime = MAnimControl::currentTime();
-   mCurSample = mCacheFiles.find(targetTime);
-   /*
-   if (rv == 2)
-   {
-      MTime targetTime(double(frame) + ticks * MTime(1.0, MTime::k6000FPS).asUnits(MTime::uiUnit()), MTime::uiUnit());
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + double(frame) + ", Tick " + double(ticks) + " -> " + targetTime.value());
-#endif
-      mCurSample = mCacheFiles.find(targetTime);
-      return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
-   }
-   else if (rv == 1)
-   {
-      MTime targetTime(double(frame), MTime::uiUnit());
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + double(frame) + " -> " + targetTime.value());
-#endif
-      mCurSample = mCacheFiles.find(targetTime);
-      return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
-   }
-
-#ifdef _DEBUG
-   MGlobal::displayWarning("  Could not extract frame number");
-#endif
-   mCurSample = mCacheFiles.end();
-   return MStatus::kFailure;
-   */
-
-   return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
+   return MStatus::kSuccess;
 }
 
 MStatus PartioCache::beginReadChunk()
@@ -381,6 +263,7 @@ MStatus PartioCache::beginReadChunk()
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache beginReadChunk");
 #endif
+   // Not always called by maya...
 
    if (mCurSample == mCacheFiles.end())
    {
@@ -390,33 +273,87 @@ MStatus PartioCache::beginReadChunk()
       return MStatus::kFailure;
    }
 
-   if (mRData && mLastSample != mCurSample)
-   {
-      resetPartioData();
-   }
+   return MStatus::kSuccess;
+}
 
-   if (!mRData)
+MStatus PartioCache::readNextTime(MTime &foundTime)
+{
+#ifdef _DEBUG
+   MGlobal::displayInfo("PartioCache readNextTime");
+#endif
+   if (mCurSample != mCacheFiles.end())
+   {
+      foundTime = MTime(mCurSample->first.asUnits(MTime::k6000FPS), MTime::k6000FPS);
+#ifdef _DEBUG
+      MGlobal::displayInfo(MString("  -> ") + foundTime.asUnits(MTime::uiUnit()));
+#endif
+      ++mCurSample;
+      return MStatus::kSuccess;
+   }
+   else
+   {
+      return MStatus::kFailure;
+   }
+}
+
+MStatus PartioCache::findChannelName(const MString &name)
+{
+#ifdef _DEBUG
+   MGlobal::displayInfo("PartioCache findChannelName " + name);
+#endif
+
+   if (name == "count" || mChannels.find(name.asChar()) != mChannels.end())
    {
 #ifdef _DEBUG
-      MGlobal::displayInfo("  Read sample from \"" + mCurSample->second + "\"");
+      MGlobal::displayInfo("  Found");
 #endif
-      mRData = Partio::read(mCurSample->second.asChar());
-      mLastSample = mCurSample;
+      if (mRData)
+      {
+         // If particles data exists, setup current attribute access
+         Partio::ParticleAttribute pattr;
+         if (name == "count")
+         {
+            mRAttrIdx = mRData->numAttributes();
+         }
+         else if (mRData->attributeInfo(name.asChar(), pattr))
+         {
+            mRAttrIdx = pattr.attributeIndex;
+            mRAttr = pattr;
+         }
+         else
+         {
+            resetReadAttr();
+            return MStatus::kFailure;
+         }
+      }
+      return MStatus::kSuccess;
    }
-   
-   resetReadAttr();
+   else
+   {
+      return MStatus::kFailure;
+   }
+}
 
-   return (mRData != NULL ? MStatus::kSuccess : MStatus::kFailure);
+void PartioCache::endReadChunk()
+{
+#ifdef _DEBUG
+   MGlobal::displayInfo("PartioCache endReadChunk");
+#endif
 }
 
 MStatus PartioCache::readTime(MTime &time)
 {
+#ifdef _DEBUG
+   MGlobal::displayInfo("PartioCache readTime");
+#endif
+   // Never called by maya
+
    if (mCurSample != mCacheFiles.end())
    {
-      time = mCurSample->first;
 #ifdef _DEBUG
-      MGlobal::displayInfo(MString("PartioCache readTime: ") + time.value());
+      MGlobal::displayInfo(MString("  -> ") + time.asUnits(MTime::uiUnit()));
 #endif
+      time = MTime(mCurSample->first.asUnits(MTime::k6000FPS), MTime::k6000FPS);
       return MStatus::kSuccess;
    }
    else
@@ -428,48 +365,50 @@ MStatus PartioCache::readTime(MTime &time)
 MStatus PartioCache::findTime(MTime &time, MTime &foundTime)
 {
 #ifdef _DEBUG
-   MGlobal::displayInfo(MString("PartioCache findTime: ") + time.value());
+   MGlobal::displayInfo(MString("PartioCache findTime: ") + time.asUnits(MTime::uiUnit()));
 #endif
+   // Called by maya when changing current frame
+   // => this is where we want to read the data, not in beginReadChunk
+   //    as it is called in loop to query all available samples and attributes (readNextTime, findChannelName)
 
    partio4Maya::CacheFiles::iterator fit;
    
    if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_EXACT, time, fit))
    {
 #ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Found: ") + fit->first.value());
+      MGlobal::displayInfo(MString("  Found: ") + fit->first.asUnits(MTime::uiUnit()));
 #endif
+
       mCurSample = fit;
-      if (beginReadChunk() == MStatus::kSuccess)
+
+      if (mCurSample != mLastSample)
       {
-         readTime(foundTime);
-         return MStatus::kSuccess;
+         resetPartioData();
       }
-   }
 
-   return MStatus::kFailure;
-}
-
-MStatus PartioCache::readNextTime(MTime &foundTime)
-{
+      if (!mRData)
+      {
 #ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache readNextTime");
+         MGlobal::displayInfo("  Read sample from \"" + mCurSample->second + "\"");
 #endif
-   if (mCurSample != mCacheFiles.end())
+         mRData = Partio::read(mCurSample->second.asChar());
+      }
+
+      resetReadAttr();
+
+      mLastSample = mCurSample;
+      
+      foundTime = MTime(fit->first.asUnits(MTime::k6000FPS), MTime::k6000FPS);
+
+      return (mRData != 0 ? MStatus::kSuccess : MStatus::kFailure);
+   }
+   else
    {
-      ++mCurSample;
-      if (mCurSample != mCacheFiles.end())
-      {
 #ifdef _DEBUG
-         MGlobal::displayInfo(MString("  Found: ") + mCurSample->first.value());
+      MGlobal::displayInfo(MString("  Not found"));
 #endif
-         if (beginReadChunk() == MStatus::kSuccess)
-         {
-            readTime(foundTime);
-            return MStatus::kSuccess;
-         }
-      }
+      return MStatus::kFailure;
    }
-   return MStatus::kFailure;
 }
 
 MStatus PartioCache::readChannelName(MString &name)
@@ -477,6 +416,7 @@ MStatus PartioCache::readChannelName(MString &name)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readChannelName");
 #endif
+   
    if (mRData)
    {
       int N = mRData->numAttributes();
@@ -533,38 +473,12 @@ MStatus PartioCache::readChannelName(MString &name)
    return MStatus::kFailure;
 }
 
-MStatus PartioCache::findChannelName(const MString &name)
-{
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache findChannelName " + name);
-#endif
-   if (mRData)
-   {
-      Partio::ParticleAttribute pattr;
-      if (name == "count")
-      {
-         // count
-         mRAttrIdx = mRData->numAttributes();
-         return MStatus::kSuccess;
-      }
-      else if (mRData->attributeInfo(name.asChar(), pattr))
-      {
-#ifdef _DEBUG
-         MGlobal::displayInfo("  Found");
-#endif
-         mRAttrIdx = pattr.attributeIndex;
-         mRAttr = pattr;
-         return MStatus::kSuccess;
-      }
-   }
-   return MStatus::kFailure;
-}
-
 unsigned PartioCache::readArraySize()
 {
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readArraySize");
 #endif
+
    if (mRData)
    {
       if (mRAttrIdx >= 0 && mRAttrIdx < mRData->numAttributes()) // or <=
@@ -577,7 +491,7 @@ unsigned PartioCache::readArraySize()
       else if (mRAttrIdx == mRData->numAttributes())
       {
 #ifdef _DEBUG
-         MGlobal::displayInfo("PartioCache readArraySize \"count\"");
+         MGlobal::displayInfo("-> \"count\"");
          MGlobal::displayInfo(MString("  ") + 1);
 #endif
          // count attribute
@@ -592,6 +506,11 @@ MStatus PartioCache::readDoubleArray(MDoubleArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readDoubleArray");
 #endif
+   if (!mRData)
+   {
+      return MStatus::kFailure;
+   }
+
    if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
       // can be the count attribute
@@ -617,6 +536,11 @@ MStatus PartioCache::readFloatArray(MFloatArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readFloatArray");
 #endif
+   if (!mRData)
+   {
+      return MStatus::kFailure;
+   }
+
    if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
@@ -632,6 +556,11 @@ MStatus PartioCache::readIntArray(MIntArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readIntArray");
 #endif
+   if (!mRData)
+   {
+      return MStatus::kFailure;
+   }
+
    if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
@@ -647,6 +576,11 @@ MStatus PartioCache::readDoubleVectorArray(MVectorArray &array, unsigned size)
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readDoubleVectorArray");
 #endif
+   if (!mRData)
+   {
+      return MStatus::kFailure;
+   }
+
    if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
@@ -662,6 +596,11 @@ MStatus PartioCache::readFloatVectorArray(MFloatVectorArray &array, unsigned siz
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache readFloatVectorArray");
 #endif
+   if (!mRData)
+   {
+      return MStatus::kFailure;
+   }
+
    if (int(size) != mRData->numParticles() || mRAttrIdx < 0 || mRAttrIdx >= mRData->numAttributes())
    {
 #ifdef _DEBUG
@@ -680,98 +619,13 @@ int PartioCache::readInt32()
    return 0;
 }
 
-void PartioCache::endReadChunk()
-{
-#ifdef _DEBUG
-   MGlobal::displayInfo("PartioCache endReadChunk");
-#endif
-   // No Operation
-}
-
 MStatus PartioCache::writeHeader(const MString &version, MTime &startTime, MTime &endTime)
 {
 #ifdef _DEBUG
    MGlobal::displayInfo("PartioCache writeHeader: " + version + " " + startTime.value() + " " + endTime.value());
 #endif
 
-   // set mCurSample
-   std::string frm = mFilename.asChar();
-   
-   // Strip directory
-   size_t p = frm.find_last_of("\\/");
-   if (p != std::string::npos)
-   {
-      if (mDirname.length() == 0)
-      {
-         mDirname = frm.substr(0, p+1).c_str();
-      }
-      frm = frm.substr(p+1);
-   }
-
-   // Strip extension
-   p = frm.rfind('.');
-   if (p != std::string::npos)
-   {
-      frm = frm.substr(0, p);
-   }
-
-   // Frame should end with Frame%d or Frame%dTick%d
-   p = frm.rfind("Frame");
-   if (p != std::string::npos)
-   {
-      if (mBasenameNoExt.length() == 0)
-      {
-         mBasenameNoExt = frm.substr(0, p).c_str();
-      }
-      frm = frm.substr(p);
-   }
-
-   int frame = -1;
-   int ticks = -1;
-   int rv = sscanf(frm.c_str(), "Frame%dTick%d", &frame, &ticks);
-
-   if (rv == 2)
-   {
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + frame + ", Tick " + ticks);
-#endif
-      mWTime = MTime(double(frame) + ticks * MTime(1, MTime::k6000FPS).asUnits(MTime::uiUnit()), MTime::uiUnit());
-   }
-   else if (rv == 1)
-   {
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Frame ") + frame);
-#endif
-      mWTime = MTime(double(frame), MTime::uiUnit());
-   }
-   else
-   {
-#ifdef _DEBUG
-      MGlobal::displayWarning("  Could not extract frame number");
-#endif
-      return MStatus::kFailure;
-   }
-
-   mCurSample = mCacheFiles.find(mWTime);
-   if (mCurSample == mCacheFiles.end())
-   {
-      char fext[256];
-      if (ticks != -1)
-      {
-         double tickframes = MTime(1, MTime::k6000FPS).asUnits(MTime::uiUnit());
-         int subframe = int(floor(ticks * tickframes * 1000 + 0.5));
-         sprintf(fext, ".%04d.%03d.%s", frame, subframe, mExt.asChar());
-      }
-      else
-      {
-         sprintf(fext, ".%04d.%s", frame, mExt.asChar());
-      }
-      MString filename = mDirname + mBasenameNoExt  + fext;
-      mCacheFiles[mWTime] = filename;
-      mCurSample = mCacheFiles.find(mWTime);
-   }
-
-   return (mCurSample != mCacheFiles.end() ? MStatus::kSuccess : MStatus::kFailure);
+   return MStatus::kSuccess;
 }
 
 void PartioCache::beginWriteChunk()
@@ -934,15 +788,12 @@ bool PartioCache::handlesDescription()
 
 MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MString &descFileLoc, const MString &descFileName)
 {
-   // Be sure to start with a clean plate
-   clean();
-
 #ifdef _DEBUG
    MGlobal::displayInfo("Read description");
 #endif
 
-   //MTimeArray times;
-   //MStringArray files;
+   // Be sure to start with a clean plate
+   clean();
 
    unsigned long n = partio4Maya::getFileList(descFileLoc, descFileName, mExt, mCacheFiles); //files, times);
 
@@ -956,36 +807,24 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
 
    mDirname = descFileLoc;
    mBasenameNoExt = descFileName;
-   //for (unsigned int i=0; i<n; ++i)
-   //{
-   //   mCacheFiles[times[i]] = files[i];
-   //}
    mCurSample = mCacheFiles.end();
    mLastSample = mCacheFiles.end();
 
-   //MTime start = times[0];
-   //MTime end = times[0];
-   //for (unsigned int i=1; i<times.length(); ++i)
    partio4Maya::CacheFiles::iterator fit = mCacheFiles.begin();
    MTime start = fit->first;
    MTime end = fit->first;
    ++fit;
    for (; fit!=mCacheFiles.end(); ++fit)
    {
-      //if (times[i] < start)
       if (fit->first < start)
       {
-         start = fit->first; //times[i];
+         start = fit->first;
       }
-      //if (times[i] > end)
       if (fit->first > end)
       {
-         end = fit->first; //times[i];
+         end = fit->first;
       }
    }
-
-   MTime cstart(floor(start.value()), MTime::uiUnit());
-   //MTime cend(ceil(end.value()), MTime::uiUnit());
 
 #ifdef _DEBUG
    MGlobal::displayInfo(MString("  Cache range: ") + start.value() + "-" + end.value());
@@ -1001,43 +840,10 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
       return MStatus::kFailure;
    }
    
-   // for the channels
+   // dummy value, as we use kOneFile and kIrregular maya doesn't take it into account
    MTime srate(1.0, MTime::uiUnit());
-   if (mCacheFiles.size() > 2)
-   {
-      // This pre-supposes that the cache has been uniformly sampled
-      // Beware though that because of maya time precision limitation
 
-      double accumsteps = 0.0;
-      int nsteps = 0;
-
-      partio4Maya::CacheFiles::iterator it1 = mCacheFiles.begin();
-      partio4Maya::CacheFiles::iterator it2 = it1;
-      ++it2;
-      while (it2 != mCacheFiles.end())
-      {
-         accumsteps += (it2->first.value() - it1->first.value());
-         ++nsteps;
-         it1 = it2;
-         ++it2;
-      }
-
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  Average sample step: ") + (accumsteps / nsteps));
-#endif
-
-      // If we do not set srate, sub-samples won't be queried...
-      srate = (accumsteps / nsteps);
-
-#ifdef _DEBUG
-      MGlobal::displayInfo(MString("  -> rate = ") + srate.value());
-#endif
-   }
-
-   mStart = cstart;
-   mSamplRate = srate;
-
-   desc.setDistribution(MCacheFormatDescription::kOneFilePerFrame);
+   desc.setDistribution(MCacheFormatDescription::kOneFile);
    desc.setTimePerFrame(MTime(1, MTime::uiUnit()));
    desc.addDescriptionInfo("PartIO cache ." + mExt);
 
@@ -1061,25 +867,27 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
          switch (pattr.type)
          {
          case Partio::INT:
-            desc.addChannel(name, name, MCacheFormatDescription::kInt32Array, MCacheFormatDescription::kRegular, srate, cstart, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kInt32Array, MCacheFormatDescription::kIrregular, srate, start, end);
+            mChannels.insert(pattr.name);
             break;
          case Partio::FLOAT:
-            desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, cstart, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kIrregular, srate, start, end);
+            mChannels.insert(pattr.name);
             break;
          case Partio::VECTOR:
-            desc.addChannel(name, name, MCacheFormatDescription::kDoubleVectorArray, MCacheFormatDescription::kRegular, srate, cstart, end);
+            desc.addChannel(name, name, MCacheFormatDescription::kDoubleVectorArray, MCacheFormatDescription::kIrregular, srate, start, end);
+            mChannels.insert(pattr.name);
             break;
          case Partio::INDEXEDSTR:
          default:
-            //desc.addChannel(name, name, MCacheFormatDescription::kUnknownData, MCacheFormatDescription::kRegular, srate, cstart, end);
+            //desc.addChannel(name, name, MCacheFormatDescription::kUnknownData, MCacheFormatDescription::kIrregular, srate, start, end);
             continue;
          }
       }
    }
 
    // At last, add count attribute
-   desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, cstart, end);
-   //desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kRegular, srate, start, end);
+   desc.addChannel("count", "count", MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kIrregular, srate, start, end);
    
    pinfo->release();
 

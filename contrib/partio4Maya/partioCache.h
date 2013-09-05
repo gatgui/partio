@@ -9,6 +9,7 @@
 #include <maya/MVectorArray.h>
 #include <maya/MFloatVectorArray.h>
 #include <maya/MTimeArray.h>
+#include <set>
 
 #include "Partio.h"
 #include "partio4MayaShared.h"
@@ -116,9 +117,7 @@ private:
    MTime mWTime;
    int mRAttrIdx;
    Partio::ParticleAttribute mRAttr;
-   MTime mStart;
-   MTime mSamplRate;
-   MTime mLastTime;
+   std::set<std::string> mChannels;
 
    static std::vector<const char*> msAllFormats;
 };
