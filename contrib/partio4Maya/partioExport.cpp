@@ -54,6 +54,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #define  kFilePrefixFlagL	"-filePrefix"
 #define  kPerFrameFlagS     "-pf"
 #define  kPerFrameFlagL   	"-perFrame"
+#define  kSkipDynamicsL     "-skipDynamics"
+#define  kSkipDynamicsS     "-sd"
 
 
 using namespace std;
@@ -83,6 +85,7 @@ MSyntax PartioExport::createSyntax()
     syntax.addFlag(kFrameStepS, kFrameStepL, MSyntax::kDouble);
     syntax.addFlag(kFilePrefixFlagS,kFilePrefixFlagL, MSyntax::kString);
 	syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
+    syntax.addFlag(kSkipDynamicsS,kSkipDynamicsL, MSyntax::kNoArg);
     syntax.addArg(MSyntax::kString);
     syntax.enableQuery(true); // for format flag only
     syntax.enableEdit(false);
@@ -142,6 +145,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
 	bool perFrame = false;
     double frameStep = 1.0;
     bool subFrames = false;
+    bool skipDynamics = argData.isFlagSet(kSkipDynamicsL);
 
     if (argData.isFlagSet(kPathFlagL))
     {
@@ -281,23 +285,20 @@ MStatus PartioExport::doIt(const MArgList& Args)
     //for  (int frame = startFrame; frame<=endFrame; frame++)
     for (double frame=startFrame; frame<=endFrame; frame+=frameStep)
     {
-		MTime dynTime;
+        MTime dynTime;
 
-		dynTime.setValue(frame);
+        dynTime.setValue(frame);
 
-		if (firstFrame && startFrame < endFrame)
-		{
-			PS.evaluateDynamics(dynTime,true);
-            firstFrame = false;
-		}
-		else
-		{
-			PS.evaluateDynamics(dynTime,false);
-		}
+        if (!skipDynamics)
+        {
+            PS.evaluateDynamics(dynTime, firstFrame);
+        }
 
 		/// Why is this being done AFTER the evaluate dynamics stuff?
         MGlobal::viewFrame(dynTime);
         outFrame = dynTime.value();
+
+        firstFrame = false;
 
         char padNum[16];
 
