@@ -201,7 +201,7 @@ void partioInstancer::postConstructor()
 
 void partioInstancer::initCallback()
 {
-
+    /*
     MObject tmo = thisMObject();
 
     short extENum;
@@ -214,8 +214,9 @@ void partioInstancer::initCallback()
     MPlug(tmo,aSize).getValue(multiplier);
     MPlug(tmo,aCacheStatic).getValue(mLastStatic);
     MPlug(tmo,aCacheOffset).getValue(mLastOffset);
-    cacheChanged = false;
 
+    cacheChanged = false;
+    */
 }
 
 void partioInstancer::reInit(void *data)

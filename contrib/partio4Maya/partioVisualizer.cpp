@@ -157,7 +157,7 @@ void partioVisualizer::postConstructor()
 
 void partioVisualizer::initCallback()
 {
-
+    /*
     MObject tmo = thisMObject();
 
     short extENum;
@@ -176,8 +176,9 @@ void partioVisualizer::initCallback()
     MPlug(tmo,aInvertAlpha).getValue(mLastInvertAlpha);
     MPlug(tmo,aCacheStatic).getValue(mLastStatic);
     MPlug(tmo,aCacheOffset).getValue(mLastOffset);
+    
     cacheChanged = false;
-
+    */
 }
 
 void partioVisualizer::reInit(void *data)

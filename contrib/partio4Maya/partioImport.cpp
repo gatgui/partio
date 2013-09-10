@@ -227,7 +227,8 @@ MStatus PartioImport::doIt(const MArgList& Args)
 
     MStatus stat;
     MFnParticleSystem partSys(objPath, &stat);
-    MString partName = partSys.particleName();
+    //MString partName = partSys.particleName();
+    MString partName = objPath.partialPathName();
 
     if (!makeParticle)
     {

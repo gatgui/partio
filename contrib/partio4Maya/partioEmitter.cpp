@@ -104,6 +104,7 @@ void partioEmitter::postConstructor()
 
 void partioEmitter::initCallback()
 {
+    /*
     MObject tmo = thisMObject();
 
     short extEnum;
@@ -115,7 +116,9 @@ void partioEmitter::initCallback()
     MPlug(tmo, aCacheFile).getValue(mLastFile);
     MPlug(tmo, aCacheStatic).getValue(mLastStatic);
     MPlug(tmo, aCacheOffset).getValue(mLastOffset);
+
     cacheChanged = false;
+    */
 }
 
 void partioEmitter::reInit(void *data)
