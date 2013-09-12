@@ -376,12 +376,40 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
         partioImport -aa -p $trsh[1] $path;
     }
 
-	string $cache = `cacheFile -directory $dirname
-                               -fileName $basename
-                               -cacheFormat $piofmt
-                               -format "OneFilePerFrame"
-                               -attachFile
-                               -inAttr ($target+".positions")`;
+    string $cache = "";
+    if (`about -apiVersion` >= 201200)
+    {
+	    $cache = `cacheFile -directory $dirname
+                            -fileName $basename
+                            -cacheFormat $piofmt
+                            -format "OneFile"  // fake OneFile format
+                            -attachFile
+                            -inAttr ($target+".positions")`;
+    }
+    else
+    {
+        string $cmd = "cacheFile -directory \"" + $dirname + "\" -fileName \"" + $basename + "\"";
+        $cmd += " -cacheFormat \"" + $piofmt + "\" -format \"OneFile\" -attachFile";
+
+        string $fattrs[] = `particle -q -perParticleDouble $target`;
+        string $vattrs[] = `particle -q -perParticleVector $target`;
+
+        // May need to generate cache XML file here as maya 2011 won't know about available channels without it
+        // With the new partioImport query flags, this should be possible
+
+        string $attr, $cattrs[] = `partioImport -query -listAttributes $path`;
+        for ($attr in $cattrs)
+        {
+            string $rv[] = `partioImport -query -attributeType $attr $path`;
+            if ((($rv[0] == "FLOAT" || $rv[0] == "INT") && stringArrayContains($attr, $fattrs) == 1) ||
+                ($rv[0] == "VECTOR" && stringArrayContains($attr, $vattrs) == 1))
+            {
+                $cmd += " -inAttr \"" + $target + "." + $attr + "\" -channelName \"" + $attr + "\"";
+            }
+        }
+        print($cmd+"\n");
+        $cache = eval($cmd);
+    }
     connectAttr ($cache+".inRange") ($target+".playFromCache");
     connectAttr ($cache+".outCacheArrayData") ($target+".cacheArrayData");
     return $cache;

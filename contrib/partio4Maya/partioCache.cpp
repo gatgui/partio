@@ -781,6 +781,7 @@ void PartioCache::endWriteChunk()
    }
 }
 
+#if MAYA_API_VERSION >= 201200
 bool PartioCache::handlesDescription()
 {
    return true;
@@ -902,6 +903,7 @@ MStatus PartioCache::writeDescription(const MCacheFormatDescription &desc, const
 
    return MStatus::kSuccess;
 }
+#endif
 
 // ---
 

@@ -2,7 +2,6 @@
 #define Partio4MayaCache_H
 
 #include <maya/MPxCacheFormat.h>
-#include <maya/MCacheFormatDescription.h>
 #include <maya/MIntArray.h>
 #include <maya/MFloatArray.h>
 #include <maya/MDoubleArray.h>
@@ -10,6 +9,9 @@
 #include <maya/MFloatVectorArray.h>
 #include <maya/MTimeArray.h>
 #include <set>
+#if MAYA_API_VERSION > 201200
+#include <maya/MCacheFormatDescription.h>
+#endif
 
 #include "Partio.h"
 #include "partio4MayaShared.h"
@@ -66,6 +68,7 @@ public:
    virtual MStatus findChannelName(const MString & name);
    virtual MStatus readChannelName(MString& name);
 
+#if MAYA_API_VERSION >= 201200
    // Read and write the description file.
    virtual bool handlesDescription();
    virtual MStatus readDescription(MCacheFormatDescription& description,
@@ -74,7 +77,8 @@ public:
    virtual MStatus writeDescription(const MCacheFormatDescription& description,
                                     const MString& descriptionFileLocation,
                                     const MString& baseFileName );
-   
+#endif
+
    // ---
 
    static size_t TotalNumFormats();

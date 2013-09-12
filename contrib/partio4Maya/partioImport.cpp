@@ -41,6 +41,10 @@ static const char *kParticleL		= "-particle";
 static const char *kParticleS		= "-p";
 static const char *kAllAttribFlagS  = "-aa";
 static const char *kAllAttribFlagL  = "-allAttributes";
+static const char *kListAttribS     = "-la";
+static const char *kListAttribL     = "-listAttributes";
+static const char *kAttribTypeS     = "-at";
+static const char *kAttribTypeL     = "-attributeType";
 
 using namespace std;
 using namespace Partio;
@@ -61,9 +65,16 @@ MSyntax PartioImport::createSyntax()
     syntax.addFlag(kAttributeFlagS, kAttributeFlagL, MSyntax::kString, MSyntax::kString);
     syntax.makeFlagMultiUse( kAttributeFlagS );
     syntax.addFlag(kFlipFlagS, kFlipFlagL, MSyntax::kNoArg);
-    syntax.addArg(MSyntax::kString);
-    syntax.enableQuery(false);
+    syntax.addFlag(kListAttribS, kListAttribL, MSyntax::kNoArg);
+    syntax.addFlag(kAttribTypeS, kAttribTypeL, MSyntax::kString);
+    syntax.makeFlagMultiUse( kAttribTypeS );
+    syntax.makeFlagQueryWithFullArgs( kAttribTypeS, true );
+    syntax.setObjectType(MSyntax::kStringObjects, 1, 1);
+    syntax.useSelectionAsDefault(false);
+
+    syntax.enableQuery(true);
     syntax.enableEdit(false);
+
 
     return syntax;
 }
@@ -85,6 +96,98 @@ MStatus PartioImport::doIt(const MArgList& Args)
     if (status == MStatus::kFailure)
     {
         MGlobal::displayError("Error parsing arguments" );
+        return MStatus::kFailure;
+    }
+
+    if (argData.isQuery())
+    {
+        MString cachePath;
+        MStringArray rv;
+
+        argData.getObjects(rv);
+        if (rv.length() != 1)
+        {
+            MGlobal::displayError("No or many Particle Cache specified");
+            return MStatus::kFailure;
+        }
+        cachePath = rv[0];
+
+        Partio::ParticlesInfo *info = Partio::readHeaders(cachePath.asChar());
+        if (!info)
+        {
+            MGlobal::displayError("Could not read particles header");
+            return MStatus::kFailure;
+        }
+
+        rv.clear();
+
+        Partio::ParticleAttribute attr;
+
+        if (argData.isFlagSet(kListAttribL))
+        {
+            if (argData.numberOfFlagUses(kAttribTypeS) > 0)
+            {
+                MGlobal::displayError("-at/-attributeType and -la/-listAttributes are mutually exclusive in query mode");
+                return MStatus::kFailure;
+            }
+            for (int i=0; i<info->numParticles(); ++i)
+            {
+                if (info->attributeInfo(i, attr))
+                {
+                    rv.append(attr.name.c_str());
+                }
+            }
+        }
+        else
+        {
+            unsigned int n = argData.numberOfFlagUses(kAttribTypeS);
+
+            if (n > 0)
+            {
+                MString attrib;
+
+                for (unsigned int i=0; i<n; ++i)
+                {
+                    MArgList argList;
+
+                    argData.getFlagArgumentList(kAttribTypeS, i, argList);
+
+                    attrib = argList.asString(0);
+
+                    if (!info->attributeInfo(attrib.asChar(), attr))
+                    {
+                        MGlobal::displayError("No attribute \"" + attrib + "\" in cache");
+                        return MStatus::kFailure;
+                    }
+
+                    switch (attr.type)
+                    {
+                    case Partio::FLOAT:
+                        rv.append("FLOAT");
+                        break;
+                    case Partio::VECTOR:
+                        rv.append("VECTOR");
+                        break;
+                    case Partio::INT:
+                        rv.append("INT");
+                        break;
+                    case Partio::INDEXEDSTR:
+                        rv.append("INDEXEDSTR");
+                        break;
+                    default:
+                        rv.append("NONE");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                MGlobal::displayWarning("Nothing to query");
+            }
+        }
+
+        setResult(rv);
+        return MStatus::kSuccess;
     }
 
     if ( argData.isFlagSet(kHelpFlagL) )
@@ -198,9 +301,15 @@ MStatus PartioImport::doIt(const MArgList& Args)
         }
     }
 
-    MString particleCache; // particleCache file
-    argData.getCommandArgument(0, particleCache);
+    MStringArray objects;
+    argData.getObjects(objects);
+    if (objects.length() != 1)
+    {
+        MGlobal::displayError("No or many Particle Cache specified");
+        return MStatus::kFailure;
+    }
 
+    MString particleCache = objects[0];
     if (!partio4Maya::cacheExists(particleCache.asChar()))
     {
         MGlobal::displayError("Particle Cache Does not exist");

@@ -86,7 +86,8 @@ MSyntax PartioExport::createSyntax()
     syntax.addFlag(kFilePrefixFlagS,kFilePrefixFlagL, MSyntax::kString);
 	syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
     syntax.addFlag(kSkipDynamicsS,kSkipDynamicsL, MSyntax::kNoArg);
-    syntax.addArg(MSyntax::kString);
+    syntax.setObjectType(MSyntax::kStringObjects, 1, 1);
+    syntax.useSelectionAsDefault(false);
     syntax.enableQuery(true); // for format flag only
     syntax.enableEdit(false);
 
@@ -105,6 +106,12 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
     MStatus status;
     MArgDatabase argData(syntax(), Args, &status);
+
+    if (status == MStatus::kFailure)
+    {
+        MGlobal::displayError("Error parsing arguments" );
+        return MStatus::kFailure;
+    }
 
     if ( argData.isQuery() )
     {
@@ -223,8 +230,16 @@ MStatus PartioExport::doIt(const MArgList& Args)
 		perFrame = true;
 	}
 
+    MStringArray objects;
+    argData.getObjects(objects);
+    if (objects.length() != 1)
+    {
+        MGlobal::displayError("No or many Particle Shape specified");
+        return MStatus::kFailure;
+    }
+
     MString PSName; // particle shape name
-    argData.getCommandArgument(0, PSName);
+    PSName = objects[0];
     MSelectionList list;
     list.add(PSName);
     MDagPath objPath;
