@@ -311,7 +311,9 @@ bool partio4Maya::identifyPath(const MString &path, MString &dirname, MString &b
         frame = "";
     }
     
+#ifdef _DEBUG
     MGlobal::displayInfo("partio4Maya::identifyPath: \"" + path + "\" -> dirname=" + dirname + ", basename=" + basename + ", frame=" + frame + ", ext=" + ext + ", time=" + t.value());
+#endif
     
     return (frame.length() > 0);
 }
