@@ -69,6 +69,7 @@ mayaenv.Install(build_dir + "/plug-ins", plugin)
 
 maya_targets = [mayaenv.Install(out_dir + "/icons", Glob(thisdir + "/icons/*.png")),
                 mayaenv.Install(out_dir + "/scripts", Glob(thisdir + "/scripts/*.mel")),
+                mayaenv.Install(out_dir + "/scripts", Glob(thisdir + "/scripts/*.py")),
                 mayaenv.Install(out_dir + "/plug-ins", plugin)]
 
 env.Alias('maya', maya_targets)

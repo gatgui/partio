@@ -9,7 +9,7 @@
 #include <maya/MFloatVectorArray.h>
 #include <maya/MTimeArray.h>
 #include <set>
-#if MAYA_API_VERSION > 201200
+#if MAYA_API_VERSION >= 201200
 #include <maya/MCacheFormatDescription.h>
 #endif
 
