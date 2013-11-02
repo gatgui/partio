@@ -68,7 +68,9 @@ if sys.platform == "win32":
 else:
     envpy.Append(CXXFLAGS=["-Wno-format"])
     if sys.platform == "darwin":
-        envpy.Append(LINKFLAGS=["-framework", "python"])
+        # Change from '$LINKFLAGS -dynamiclib'
+        envpy['SHLINKFLAGS'] = '$LINKFLAGS -bundle'
+        envpy.Append(LINKFLAGS=" -undefined dynamic_lookup")
     else:
         envpy.Append(LIBS="python%s" % python_ver)
 
