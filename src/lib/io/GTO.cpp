@@ -30,10 +30,11 @@ public:
    {
    public:
       PProp()
+         : mIt(0)
       {
       }
       
-      PProp(Properties::iterator it)
+      PProp(PropertyInfo *it)
          : mIt(it)
       {
       }
@@ -58,36 +59,37 @@ public:
       
       int name() const
       {
-         return mIt->name;
+         return (mIt ? mIt->name : -1);
       }
       
       Gto::DataType type() const
       {
-         return Gto::DataType(mIt->type);
+         return (mIt ? Gto::DataType(mIt->type) : Gto::ErrorType);
       }
       
       unsigned int size() const
       {
-         return mIt->size;
+         return (mIt ? mIt->size : 0);
       }
       
       unsigned int width() const
       {
-         return mIt->width;
+         return (mIt ? mIt->width : 0);
       }
       
       int interpretation()
       {
-         return mIt->interpretation;
+         return (mIt ? mIt->interpretation : -1);
       }
       
       operator PropertyInfo& ()
       {
-         return *mIt;
+         static PropertyInfo _undefined;
+         return (mIt ? *mIt : _undefined);
       }
       
    private:
-      mutable Properties::iterator mIt;
+      mutable PropertyInfo *mIt;
    };
    
    typedef std::deque<PProp> PropDQ;
@@ -96,10 +98,11 @@ public:
    {
    public:
       PComp()
+         : mIt(0)
       {
       }
       
-      PComp(Components::iterator &it)
+      PComp(ComponentInfo *it)
          : mIt(it)
       {
       }
@@ -126,10 +129,10 @@ public:
       
       int name() const
       {
-         return mIt->name;
+         return (mIt ? mIt->name : -1);
       }
       
-      PProp& addProperty(const std::string &name, Properties::iterator &pit)
+      PProp& addProperty(const std::string &name, PropertyInfo *pit)
       {
          IndexMap::iterator pmit = mPropIndices.find(name);
          if (pmit == mPropIndices.end())
@@ -185,7 +188,7 @@ public:
       }
       
    private:
-      mutable Components::iterator mIt;
+      mutable ComponentInfo *mIt;
       mutable IndexMap mPropIndices;
       mutable PropDQ mProps;
    };
@@ -196,10 +199,11 @@ public:
    {
    public:
       PObj()
+         : mIt(0)
       {
       }
       
-      PObj(Objects::iterator it)
+      PObj(ObjectInfo *it)
          : mIt(it)
       {
       }
@@ -226,10 +230,10 @@ public:
       
       int name() const
       {
-         return mIt->name;
+         return (mIt ? mIt->name : -1);
       }
       
-      PComp& addComponent(const std::string &name, Components::iterator &cit)
+      PComp& addComponent(const std::string &name, ComponentInfo *cit)
       {
          IndexMap::iterator cmit = mCompIndices.find(name);
          if (cmit == mCompIndices.end())
@@ -285,7 +289,7 @@ public:
       }
       
    private:
-      mutable Objects::iterator mIt;
+      mutable ObjectInfo *mIt;
       mutable IndexMap mCompIndices;
       mutable PCompDQ mComps;
    };
@@ -324,12 +328,7 @@ public:
          return;
       }
       
-      ObjectInfo *ohead = &objs[0];
-      ComponentInfo *chead = &comps[0];
-      //PropertyInfo *phead = &props[0];
-      
-      Objects::iterator oit;
-      Components::iterator cit;
+      PropertyInfo *phead = &props[0];
       Properties::iterator pit;
       
       std::string oname;
@@ -342,16 +341,13 @@ public:
          if (stringFromId(pit->component->object->protocolName) == GTO_PROTOCOL_PARTICLE &&
              pit->component->object->protocolVersion == 1)
          {
-            cit = comps.begin() + (pit->component - chead);
-            oit = objs.begin() + (pit->component->object - ohead);
-            
             pname = stringFromId(pit->name);
             cname = stringFromId(pit->component->name);
             oname = stringFromId(pit->component->object->name);
             
-            PObj &obj = addObject(oname, oit);
-            PComp &comp = obj.addComponent(cname, cit);
-            comp.addProperty(pname, pit);
+            PObj &obj = addObject(oname, (ObjectInfo*) pit->component->object);
+            PComp &comp = obj.addComponent(cname, (ComponentInfo*) pit->component);
+            comp.addProperty(pname, phead + (pit - props.begin()));
          }
          
          ++pit;
@@ -452,7 +448,7 @@ public:
    
    // ---
    
-   PObj& addObject(const std::string &name, Objects::iterator &oit)
+   PObj& addObject(const std::string &name, ObjectInfo *oit)
    {
       IndexMap::iterator omit = mObjIndices.find(name);
       if (omit == mObjIndices.end())

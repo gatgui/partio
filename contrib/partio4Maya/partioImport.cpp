@@ -319,7 +319,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
     if (makeParticle)
     {
         MStringArray foo;
-        MGlobal::executeCommand("particle -n partioImport -p 0 0 0", foo);
+        MGlobal::executeCommand("nParticle -n partioImport", foo);
         particleShape = foo[1];
     }
 
@@ -336,25 +336,25 @@ MStatus PartioImport::doIt(const MArgList& Args)
 
     MStatus stat;
     MFnParticleSystem partSys(objPath, &stat);
-    //MString partName = partSys.particleName();
-    MString partName = objPath.partialPathName();
-
-    if (!makeParticle)
-    {
-        // delete all particles in the system first
-        MVectorArray clearOut;
-        clearOut.clear();
-        partSys.setCount(0);
-        partSys.setPerParticleAttribute("position", clearOut);
-        partSys.setPerParticleAttribute("velocity", clearOut);
-    }
 
     if (stat == MStatus::kSuccess) // particle object was found and attached to
     {
         Partio::ParticlesDataMutable* particles;
         Partio::ParticleAttribute positionAttr;
         Partio::ParticleAttribute velocityAttr;
-
+        
+        MString partName = objPath.partialPathName();
+        
+        if (!makeParticle)
+        {
+            MVectorArray empty;
+            
+            // Reset particle count and for empty position and velocity
+            partSys.setCount(0);
+            partSys.setPerParticleAttribute("position", empty);
+            partSys.setPerParticleAttribute("velocity", empty);
+        }
+        
         MGlobal::displayInfo(MString ("PartioImport-> LOADING: ") + particleCache);
         particles = read(particleCache.asChar());
 
@@ -596,7 +596,6 @@ MStatus PartioImport::doIt(const MArgList& Args)
             particles->release();
         }
 
-        partSys.setCount(positions.length());
         // Seems to MFnParticleSystem expects velocities in world space and positions in local space
         // Don't ask me why but this is the only way to get matching object-space velocities
         stat = partSys.emit(positions, velocities);
