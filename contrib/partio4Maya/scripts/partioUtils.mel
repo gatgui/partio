@@ -389,6 +389,15 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
                         -inAttr ($target+".positions")`;
     connectAttr ($cache+".inRange") ($target+".playFromCache");
     connectAttr ($cache+".outCacheArrayData") ($target+".cacheArrayData");
+    
+    // Though the cache node is using a format registered by partio4Maya plugin
+    //   Maya won't add the necessary 'require partio4Maya' in the saved file
+    // Create a shared partioForceLoad dummy node and connect it to the cache node
+    //   so that it will be pulled by export selection too
+    string $piofl = `createNode -name partioForceLoad -shared partioForceLoad`;
+    addAttr -ln partioForceLoad -sn piofl -at message $cache;
+    connectAttr ($piofl+".message") ($cache+".piofl");
+    
     return $cache;
 }
 

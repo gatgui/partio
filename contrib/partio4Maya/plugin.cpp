@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "partioImport.h"
 #include "partio4MayaShared.h"
 #include "partioCache.h"
+#include "partioForceLoad.h"
 #include <maya/MFnPlugin.h>
 
 #define REGISTER_CACHE_FORMAT(n)\
@@ -73,7 +74,7 @@ MStatus initializePlugin ( MObject obj )
     MGlobal::executeCommand("source partioUtils.mel");
 
     MStatus status;
-    MFnPlugin plugin ( obj, "RedpawFX,Luma Pictures,WDAS", "0.9.5b", "Any" );
+    MFnPlugin plugin ( obj, "RedpawFX,Luma Pictures,WDAS,Marza", "0.9.6", "Any" );
 
     status = plugin.registerShape( "partioVisualizer", partioVisualizer::id,
                                    &partioVisualizer::creator,
@@ -119,6 +120,16 @@ MStatus initializePlugin ( MObject obj )
     if (!status)
     {
         status.perror("registerCommand partioImport failed");
+    }
+    
+    status = plugin.registerNode ( "partioForceLoad", partioForceLoad::id,
+                                   &partioForceLoad::creator, &partioForceLoad::initialize,
+                                   MPxNode::kDependNode );
+    
+    if (!status)
+    {
+        status.perror ( "registerNode partioForceLoad failed" );
+        return status;
     }
     
     // Register up to 20 cache formats
@@ -174,6 +185,13 @@ MStatus uninitializePlugin ( MObject obj )
     if ( !status )
     {
         status.perror ( "deregisterNode partioEmitter failed" );
+        return status;
+    }
+    
+    status = plugin.deregisterNode ( partioForceLoad::id );
+    if ( !status )
+    {
+        status.perror ( "deregisterNode partioForceLoad failed" );
         return status;
     }
 
