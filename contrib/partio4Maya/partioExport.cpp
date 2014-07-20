@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MMatrix.h>
 #include <maya/MDagPath.h>
 #include <maya/MAnimControl.h>
+#include <maya/MPoint.h>
 
 #define  kAttributeFlagS	"-atr"
 #define  kAttributeFlagL	"-attribute"
@@ -297,6 +298,8 @@ MStatus PartioExport::doIt(const MArgList& Args)
     computation.beginComputation();
 
     MFnParticleSystem PS(objPath);
+    MMatrix W = objPath.inclusiveMatrix();
+    MMatrix iW = W.inverse();
 
     double outFrame;
     bool firstFrame = true;
@@ -547,6 +550,15 @@ MStatus PartioExport::doIt(const MArgList& Args)
                         Partio::Data<float,3>& vecAttr=vectorAccess.data<Partio::Data<float,3> >(it);
 
                         MVector P = VA[a];
+                        
+                        // Note: positions returned by MFnParticleSystem::position are actually world space positions
+                        if (attrName == "position")
+                        {
+                            MPoint pt(P);
+                            pt = pt * iW;
+                            P = pt;
+                        }
+                        
                         vecAttr[0] = (float)P.x;
 
                         // Note: swapUP only works for object-space coordinates...
