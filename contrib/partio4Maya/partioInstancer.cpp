@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 
 #include "partioInstancer.h"
+#include <maya/MArrayDataBuilder.h>
 
 //static MGLFunctionTable *gGLFT = NULL;
 
