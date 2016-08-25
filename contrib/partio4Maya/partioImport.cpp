@@ -502,7 +502,12 @@ MStatus PartioImport::doIt(const MArgList& Args)
                         command += " vectorArray ";
                         command += partName;
                         command += ";";
-                        MGlobal::executeCommand(command);
+                        stat = MGlobal::executeCommand(command);
+                        if (stat != MS::kSuccess)
+                        {
+                            MGlobal::displayWarning(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])) + " (\"" + command + "\" command failed [" + stat.errorString() + "]");
+                            continue;
+                        }
                     }
                     MVectorArray vAttribute;
                     vAttribute.setLength(particles->numParticles());
@@ -511,7 +516,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
                 else if (testAttr.count == 1)
                 {
-                    if (!partSys.isPerParticleDoubleAttribute(attrNames[i]))
+                    if (!partSys.isPerParticleDoubleAttribute(mayaAttrNames[i]))
                     {
                         MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]));
                         MString command;
@@ -520,7 +525,12 @@ MStatus PartioImport::doIt(const MArgList& Args)
                         command += " doubleArray ";
                         command += partName;
                         command += ";";
-                        MGlobal::executeCommand(command);
+                        stat = MGlobal::executeCommand(command);
+                        if (stat != MS::kSuccess)
+                        {
+                            MGlobal::displayWarning(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])) + " (\"" + command + "\" command failed [" + stat.errorString() + "]");
+                            continue;
+                        }
                     }
                     MDoubleArray dAttribute;
                     dAttribute.setLength(particles->numParticles());
@@ -529,7 +539,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
                 else
                 {
-                    MGlobal::displayError(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])));
+                    MGlobal::displayWarning(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])) + " (unsupported dimension)");
                 }
             }
         }
