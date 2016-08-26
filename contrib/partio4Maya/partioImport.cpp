@@ -30,6 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "partioImport.h"
 #include <maya/MMatrix.h>
 #include <maya/MDagPath.h>
+#include <maya/MPlug.h>
+#include <maya/MFnTypedAttribute.h>
 
 static const char *kAttributeFlagS	= "-atr";
 static const char *kAttributeFlagL  = "-attribute";
@@ -495,18 +497,20 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 {
                     if (!partSys.isPerParticleVectorAttribute(mayaAttrNames[i]))
                     {
-                        MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]) );
-                        MString command;
-                        command += "pioEmAddPPAttr ";
-                        command += mayaAttrNames[i];
-                        command += " vectorArray ";
-                        command += partName;
-                        command += ";";
-                        stat = MGlobal::executeCommand(command);
-                        if (stat != MS::kSuccess)
+                        MPlug plug = partSys.findPlug(mayaAttrNames[i]);
+                        if (plug.isNull())
                         {
-                            MGlobal::displayWarning(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])) + " (\"" + command + "\" command failed [" + stat.errorString() + "]");
-                            continue;
+                            MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]) );
+                            MFnTypedAttribute tattr;
+                            
+                            MString initAttr = mayaAttrNames[i] + "0";
+                            
+                            MObject obj0 = tattr.create(initAttr, initAttr, MFnData::kVectorArray);
+                            partSys.addAttribute(obj0);
+                            
+                            MObject obj = tattr.create(mayaAttrNames[i], mayaAttrNames[i], MFnData::kVectorArray);
+                            tattr.setKeyable(true);
+                            partSys.addAttribute(obj);
                         }
                     }
                     MVectorArray vAttribute;
@@ -518,18 +522,20 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 {
                     if (!partSys.isPerParticleDoubleAttribute(mayaAttrNames[i]))
                     {
-                        MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]));
-                        MString command;
-                        command += "pioEmAddPPAttr ";
-                        command += mayaAttrNames[i];
-                        command += " doubleArray ";
-                        command += partName;
-                        command += ";";
-                        stat = MGlobal::executeCommand(command);
-                        if (stat != MS::kSuccess)
+                        MPlug plug = partSys.findPlug(mayaAttrNames[i]);
+                        if (plug.isNull())
                         {
-                            MGlobal::displayWarning(MString("PartioImport-> Skipping attr: " + MString(attrNames[i])) + " (\"" + command + "\" command failed [" + stat.errorString() + "]");
-                            continue;
+                            MGlobal::displayInfo(MString("PartioImport-> Adding ppAttr " + mayaAttrNames[i]));
+                            MFnTypedAttribute tattr;
+                            
+                            MString initAttr = mayaAttrNames[i] + "0";
+                            
+                            MObject obj0 = tattr.create(initAttr, initAttr, MFnData::kDoubleArray);
+                            partSys.addAttribute(obj0);
+                            
+                            MObject obj = tattr.create(mayaAttrNames[i], mayaAttrNames[i], MFnData::kDoubleArray);
+                            tattr.setKeyable(true);
+                            partSys.addAttribute(obj);
                         }
                     }
                     MDoubleArray dAttribute;
