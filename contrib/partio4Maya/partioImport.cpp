@@ -604,6 +604,10 @@ MStatus PartioImport::doIt(const MArgList& Args)
         if (!validVelocity)
         {
             velocities.setLength(particles->numParticles());
+            for (unsigned int i=0; i<particles->numParticles(); ++i)
+            {
+                velocities[i] = MVector::zero;
+            }
         }
 
         /// Emit particles
