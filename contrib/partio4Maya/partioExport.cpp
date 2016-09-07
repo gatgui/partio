@@ -57,6 +57,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #define  kPerFrameFlagL   	"-perFrame"
 #define  kSkipDynamicsL     "-skipDynamics"
 #define  kSkipDynamicsS     "-sd"
+#define  kWorldSpaceL       "-worldSpace"
+#define  kWorldSpaceS       "-ws"
 #define  kNoXMLS            "-nx"
 #define  kNoXMLL            "-noXML"
 
@@ -90,6 +92,7 @@ MSyntax PartioExport::createSyntax()
 	syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
     syntax.addFlag(kSkipDynamicsS,kSkipDynamicsL, MSyntax::kNoArg);
     syntax.addFlag(kNoXMLS,kNoXMLL, MSyntax::kNoArg);
+    syntax.addFlag(kWorldSpaceS,kWorldSpaceL, MSyntax::kNoArg);
     syntax.setObjectType(MSyntax::kStringObjects, 1, 1);
     syntax.useSelectionAsDefault(false);
     syntax.enableQuery(true); // for format flag only
@@ -158,6 +161,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
     bool subFrames = false;
     bool noXML = argData.isFlagSet(kNoXMLL);
     bool skipDynamics = argData.isFlagSet(kSkipDynamicsL);
+    bool worldSpace = argData.isFlagSet(kWorldSpaceL);
 
     if (argData.isFlagSet(kPathFlagL))
     {
@@ -264,7 +268,10 @@ MStatus PartioExport::doIt(const MArgList& Args)
     MStringArray  attrNames;
     attrNames.append(MString("id"));
     attrNames.append(MString("position"));
-
+    bool hasVelocity = false;
+    bool hasAcceleration = false;
+    // If -ws/-worldSpace is not set, treat worldPosition, worldVelocity, worldAcceleration as additional attributes
+    // If -ws/-worldSpace is set, treat object space and world space attributes as one (only output 'position', 'velocity' and 'acceleration' in world space)
 
     for ( unsigned int i = 0; i < numUses; i++ )
     {
@@ -283,14 +290,48 @@ MStatus PartioExport::doIt(const MArgList& Args)
             return status;
         }
 
-        if ( attrName == "position" || attrName == "id" || attrName == "particleId")
+        if ( attrName == "position" || attrName == "id" || attrName == "particleId" )
         {
+            continue;
         }
-        else
+        
+        if ( worldSpace )
         {
-            attrNames.append(attrName);
+            if ( attrName == "worldPosition" )
+            {
+                continue;
+            }
+            else if ( attrName == "worldVelocity" )
+            {
+                if ( !hasVelocity )
+                {
+                    hasVelocity = true;
+                    attrNames.append( "velocity" );
+                }
+                continue;
+            }
+            else if ( attrName == "worldAcceleration" )
+            {
+                if ( !hasAcceleration )
+                {
+                    hasAcceleration = true;
+                    attrNames.append( "acceleration" );
+                }
+                continue;
+            }
         }
-
+        
+        if ( !hasVelocity && attrName == "velocity" )
+        {
+            hasVelocity = true;
+        }
+        
+        if ( !hasAcceleration && attrName == "acceleration" )
+        {
+            hasAcceleration = true;
+        }
+        
+        attrNames.append(attrName);
     }
     /// ARGS PARSED
 
@@ -316,7 +357,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
             PS.evaluateDynamics(dynTime, firstFrame);
         }
 
-		/// Why is this being done AFTER the evaluate dynamics stuff?
+        /// Why is this being done AFTER the evaluate dynamics stuff?
         MGlobal::viewFrame(dynTime);
         outFrame = dynTime.value();
 
@@ -544,7 +585,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
                     int a = 0;
 
-                    for (it=p->begin();it!=p->end();++it)
+                    for (it=p->begin(); it!=p->end(); ++it, ++a)
                     {
 
                         Partio::Data<float,3>& vecAttr=vectorAccess.data<Partio::Data<float,3> >(it);
@@ -552,11 +593,17 @@ MStatus PartioExport::doIt(const MArgList& Args)
                         MVector P = VA[a];
                         
                         // Note: positions returned by MFnParticleSystem::position are actually world space positions
-                        if (attrName == "position")
+                        if (!worldSpace && attrName == "position")
                         {
                             MPoint pt(P);
                             pt = pt * iW;
                             P = pt;
+                        }
+                        
+                        // Note: velocities and accelerations from MFnParticleSystem::velocity and MFnParticleSystem::acceleration are in local space
+                        if (worldSpace && (attrName == "velocity" || attrName == "acceleration"))
+                        {
+                            P = P * W;
                         }
                         
                         vecAttr[0] = (float)P.x;
@@ -573,7 +620,6 @@ MStatus PartioExport::doIt(const MArgList& Args)
                             vecAttr[1] = (float)P.y;
                             vecAttr[2] = (float)P.z;
                         }
-                        a++;
                     }
 
                 } /// add vector attr
@@ -589,9 +635,9 @@ MStatus PartioExport::doIt(const MArgList& Args)
                 const SECURITY_ATTRIBUTES *psa = NULL;
                 SHCreateDirectoryEx(hwnd, Path.asChar(), psa);
 #else
-				mode_t userMask = umask(0);
-				umask(userMask);
-				mode_t DIR_MODE = ((0777) ^ userMask);
+                mode_t userMask = umask(0);
+                umask(userMask);
+                mode_t DIR_MODE = ((0777) ^ userMask);
                 mkdir (Path.asChar(), DIR_MODE );
 #endif
             }
@@ -608,12 +654,12 @@ MStatus PartioExport::doIt(const MArgList& Args)
         } /// if particle count > 0
 
         // support escaping early  in export command
-        if  (computation.isInterruptRequested())
-		{	MGlobal::displayWarning("PartioExport detected escape being pressed, ending export early!" ) ;
-			break;
-		}
+        if (computation.isInterruptRequested())
+        {   MGlobal::displayWarning("PartioExport detected escape being pressed, ending export early!" ) ;
+            break;
+        }
 
-	} /// loop frames
+    } /// loop frames
 
     // Also output xml file
     if (outFiles.length() > 0 && !noXML)
