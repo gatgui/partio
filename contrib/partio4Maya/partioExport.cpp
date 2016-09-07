@@ -35,26 +35,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MAnimControl.h>
 #include <maya/MPoint.h>
 
-#define  kAttributeFlagS	"-atr"
-#define  kAttributeFlagL	"-attribute"
-#define  kMinFrameFlagS		"-mnf"
-#define  kMinFrameFlagL		"-minFrame"
-#define  kMaxFrameFlagS		"-mxf"
-#define  kMaxFrameFlagL		"-maxFrame"
+#define  kAttributeFlagS    "-atr"
+#define  kAttributeFlagL    "-attribute"
+#define  kMinFrameFlagS     "-mnf"
+#define  kMinFrameFlagL     "-minFrame"
+#define  kMaxFrameFlagS     "-mxf"
+#define  kMaxFrameFlagL     "-maxFrame"
 #define  kFrameStepL        "-frameStep"
 #define  kFrameStepS        "-fst"
-#define  kHelpFlagS			"-h"
-#define  kHelpFlagL			"-help"
-#define  kPathFlagS			"-p"
-#define  kPathFlagL			"-path"
-#define  kFlipFlagS			"-flp"
-#define  kFlipFlagL			"-flip"
-#define  kFormatFlagS		"-f"
-#define  kFormatFlagL		"-format"
-#define  kFilePrefixFlagS	"-fp"
-#define  kFilePrefixFlagL	"-filePrefix"
+#define  kHelpFlagS         "-h"
+#define  kHelpFlagL         "-help"
+#define  kPathFlagS         "-p"
+#define  kPathFlagL         "-path"
+#define  kFlipFlagS         "-flp"
+#define  kFlipFlagL         "-flip"
+#define  kFormatFlagS       "-f"
+#define  kFormatFlagL       "-format"
+#define  kFilePrefixFlagS   "-fp"
+#define  kFilePrefixFlagL   "-filePrefix"
 #define  kPerFrameFlagS     "-pf"
-#define  kPerFrameFlagL   	"-perFrame"
+#define  kPerFrameFlagL     "-perFrame"
 #define  kSkipDynamicsL     "-skipDynamics"
 #define  kSkipDynamicsS     "-sd"
 #define  kWorldSpaceL       "-worldSpace"
@@ -89,7 +89,7 @@ MSyntax PartioExport::createSyntax()
     syntax.addFlag(kMaxFrameFlagS, kMaxFrameFlagL, MSyntax::kDouble);
     syntax.addFlag(kFrameStepS, kFrameStepL, MSyntax::kDouble);
     syntax.addFlag(kFilePrefixFlagS,kFilePrefixFlagL, MSyntax::kString);
-	syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
+    syntax.addFlag(kPerFrameFlagS,kPerFrameFlagL, MSyntax::kString);
     syntax.addFlag(kSkipDynamicsS,kSkipDynamicsL, MSyntax::kNoArg);
     syntax.addFlag(kNoXMLS,kNoXMLL, MSyntax::kNoArg);
     syntax.addFlag(kWorldSpaceS,kWorldSpaceL, MSyntax::kNoArg);
@@ -156,7 +156,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
     MString Format;
     MString fileNamePrefix;
     bool hasFilePrefix = false;
-	bool perFrame = false;
+    bool perFrame = false;
     double frameStep = 1.0;
     bool subFrames = false;
     bool noXML = argData.isFlagSet(kNoXMLL);
@@ -235,9 +235,9 @@ MStatus PartioExport::doIt(const MArgList& Args)
     }
 
     if (argData.isFlagSet(kPerFrameFlagL))
-	{
-		perFrame = true;
-	}
+    {
+        perFrame = true;
+    }
 
     MStringArray objects;
     argData.getObjects(objects);
@@ -321,13 +321,20 @@ MStatus PartioExport::doIt(const MArgList& Args)
             }
         }
         
-        if ( !hasVelocity && attrName == "velocity" )
+        if ( attrName == "velocity" )
         {
+            if ( hasVelocity )
+            {
+                continue;
+            }
             hasVelocity = true;
         }
-        
-        if ( !hasAcceleration && attrName == "acceleration" )
+        else if ( attrName == "acceleration" )
         {
+            if ( hasAcceleration )
+            {
+                continue;
+            }
             hasAcceleration = true;
         }
         
