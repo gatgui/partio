@@ -182,7 +182,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
     if (argData.isFlagSet(kFrameStepS))
     {
         argData.getFlagArgument(kFrameStepS, 0, frameStep);
-        if (fabs(frameStep - floor(frameStep)) > 0.001)
+        if (fabs(frameStep - floor(frameStep)) >= 0.001)
         {
             subFrames = true;
         }
@@ -216,6 +216,10 @@ MStatus PartioExport::doIt(const MArgList& Args)
     else
     {
         startFrame = float(MAnimControl::animationStartTime().value());
+    }
+    if (fabs(startFrame - floor(startFrame)) >= 0.001)
+    {
+        subFrames = true;
     }
 
     if (argData.isFlagSet(kMaxFrameFlagL))

@@ -31,40 +31,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 //  Description:  A gui for the partioExport command   that gives much more user friendly control over exporting particles
 //
 
-global proc partioExportGui  ()
+global proc partioExportGui()
 {
 
     global int $partioExportGuiTabSelected;
 
-    if ($partioExportGuiTabSelected == 0) {
+    if ($partioExportGuiTabSelected == 0)
+    {
         $partioExportGuiTabSelected = 1;
     }
 
     if (`window  -exists  partioExportGui`)
         deleteUI partioExportGui ;
 
-    window  -s true -title "partioExportGui" -w 520 -h 600
-			-iconName "partioExportGui" partioExportGui;
+    window  -s true -title "partioExportGui" -w 520 -h 600 -iconName "partioExportGui" partioExportGui;
 
-////////////////////////////////////////////
-///// Main layout is a TabLayout
+    ////////////////////////////////////////////
+    ///// Main layout is a TabLayout
 
-////////////////////////////////////////////////////////
-/////// CREATE CACHE  TAB
+    ////////////////////////////////////////////////////////
+    /////// CREATE CACHE  TAB
 
-    int $start =  `playbackOptions -query -minTime`;
-    int $end =  `playbackOptions -query -maxTime`;
+    float $start =  `playbackOptions -query -minTime`;
+    float $end =  `playbackOptions -query -maxTime`;
     string $form = `formLayout -w 520 -h 600`;
-//	string $tabLayout =`tabLayout  mainTabLayout`;  // when we add the manage cache stuff back in we can re-enable this
+    //string $tabLayout =`tabLayout  mainTabLayout`;  // when we add the manage cache stuff back in we can re-enable this
     string $mainLayout = `formLayout -w 530 Create_Cache `;
 
     string $aboutLogoButton = `iconTextButton -style "iconOnly"    -image1 "partioExportGuiLogo.png"`;
     string $refreshButton = `iconTextButton -style "iconOnly"  -image1 "partioExportRefresh.png"`;
 
-    string $closeButton 	= `button  -w 75 -h 35 -ebg true -bgc .25 0 0 -l "Close" -c "deleteUI partioExportGui"`;
-    string $dynExportButton    = `button -w 200 -h 35 -ebg true -bgc 0 .25  0 -l "partioExport" `;
+    string $closeButton = `button  -w 75 -h 35 -ebg true -bgc .25 0 0 -l "Close" -c "deleteUI partioExportGui"`;
+    string $dynExportButton = `button -w 200 -h 35 -ebg true -bgc 0 .25  0 -l "partioExport" `;
 
-	string $partioExportFormatOptionMenu = `optionMenuGrp -l "PartioFormat" partioExportFormat`;
+    string $partioExportFormatOptionMenu = `optionMenuGrp -l "PartioFormat" partioExportFormat`;
     string $fmt, $fmts[] = `partioExport -query -format`;
     int $default = 0, $ifmt = 0;
     for ($fmt in $fmts)
@@ -79,19 +79,18 @@ global proc partioExportGui  ()
 
     optionMenuGrp -e -sl 11 $partioExportFormatOptionMenu;
 
-    string $startFrame = `intFieldGrp -l "StartFrame" -cw 1 90 -cw 2 80 -nf 1  -v $start  0 0 0 `;
-    string $endFrame   = `intFieldGrp -l "EndFrame" -cw 1 90 -cw 2 80 -nf 1 -v $end 0 0 0 `;
-    string $frameStep  = `floatFieldGrp -l "Step" -cw 1 90 -cw 2 80 -nf 1 -pre 6 -v 1.0 0 0 0`;
+    string $startFrame = `floatFieldGrp -l "StartFrame" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v $start  0 0 0 `;
+    string $endFrame   = `floatFieldGrp -l "EndFrame" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v $end 0 0 0 `;
+    string $frameStep  = `floatFieldGrp -l "Step" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v 1.0 0 0 0`;
 
+    /////////////////////////////
+    // cache directory
 
-/////////////////////////////
-// cache directory
-
-	string $cachePathFromOptionVar = "";
-	if (`optionVar -exists "partioExportGUICachePath"`)
-	{
-		$cachePathFromOptionVar = `optionVar -q "partioExportGUICachePath"`;
-	}
+    string $cachePathFromOptionVar = "";
+    if (`optionVar -exists "partioExportGUICachePath"`)
+    {
+        $cachePathFromOptionVar = `optionVar -q "partioExportGUICachePath"`;
+    }
 
     string $cacheDir = `textFieldButtonGrp -l "Cache Directory" -text $cachePathFromOptionVar -buttonLabel "....." -cw 1 85  -cw 2 400`;
 
@@ -99,7 +98,7 @@ global proc partioExportGui  ()
 
     buildParticleScrollList();
 
-	// edit functions to buttons
+    // edit functions to buttons
     button -e -c ("dynExportSelectedparticles "+$startFrame+" "+$endFrame+" "+$frameStep+" "+$partioExportFormatOptionMenu+" "+$cacheDir) $dynExportButton;
     textFieldButtonGrp -e -bc ("updatePath "+$cacheDir) $cacheDir;
     iconTextButton -e -c "buildParticleScrollList" $refreshButton;
@@ -131,7 +130,7 @@ global proc partioExportGui  ()
 
     showWindow partioExportGui;
 
-	// this shakes the window to force it to come up at the desired size every time.
+    // this shakes the window to force it to come up at the desired size every time.
     window -edit  -w 501 -h 401 partioExportGui;
     window -edit  -w 520 -h 500 partioExportGui;
 
@@ -142,7 +141,9 @@ global proc buildParticleScrollList()
 {
 
     if (`columnLayout -q -exists "particleColumnLayout"`)
+    {
         deleteUI particleColumnLayout;
+    }
 
     setParent particleScrollList;
     string $columnMain = `columnLayout particleColumnLayout`;
@@ -153,33 +154,35 @@ global proc buildParticleScrollList()
 
     for ($particle in $particles)
     {
-		// filters out ncloth crap because for whatever reason  ls -type particle returns all ncloth stuff too
-		if (`nodeType $particle` == "particle" || `nodeType $particle` == "nParticle")
-		{
-			string $parent = `columnLayout -p $columnMain` ;
-			buildParticleEntry $particle $parent $color;
+        // filters out ncloth crap because for whatever reason  ls -type particle returns all ncloth stuff too
+        if (`nodeType $particle` == "particle" || `nodeType $particle` == "nParticle")
+        {
+            string $parent = `columnLayout -p $columnMain` ;
+            buildParticleEntry $particle $parent $color;
 
-			if ($color == 0)
-			{
-				$color = 1;
-			}
-			else
-			{
-				$color = 0;
-			}
-		}
+            if ($color == 0)
+            {
+                $color = 1;
+            }
+            else
+            {
+                $color = 0;
+            }
+        }
     }
 }
 
 
-global proc buildParticleEntry (string $particle, string $parent, int $color )
+global proc buildParticleEntry(string $particle, string $parent, int $color)
 {
 
     float $uiColor;
-    if ($color == 0) {
+    if ($color == 0)
+    {
         $uiColor = .2 ;
     }
-    else  {
+    else
+    {
         $uiColor  = .35;
     }
 
@@ -195,14 +198,14 @@ global proc buildParticleEntry (string $particle, string $parent, int $color )
     $particleExportCheckbox = ($particle+"exportCheckBox");
     $particleRampCheckbox = ($particle+"rampCheckbox");
     $particleSupressedCheckbox = ($particle+"supressedCheckbox");
-	$particleOverrideName = ($particle+"overrideNameText");
+    $particleOverrideName = ($particle+"overrideNameText");
 
 
     if (!`rowLayout -exists ($particle+"checkboxRowLayout")`)
     {
         rowLayout -ebg true -bgc $uiColor $uiColor $uiColor -nc 4 -cw3 230 75 75  ($particle+"checkboxRowLayout");
         checkBox  -l  ("Check to Export ")  $particleExportCheckbox;
-		textFieldGrp -text $particle $particleOverrideName;
+        textFieldGrp -text $particle $particleOverrideName;
         checkBox  -l  "ramp Attrs" -cc ("buildParticleEntry "+ $particle + " " + $parent + " " + $color) $particleRampCheckbox;
         checkBox  -l "supressed" -cc ("buildParticleEntry "+ $particle + " " + $parent+ " " + $color) $particleSupressedCheckbox;
         setParent $parent;
@@ -213,20 +216,22 @@ global proc buildParticleEntry (string $particle, string $parent, int $color )
 
     rowColumnLayout -ebg true -bgc $uiColor $uiColor $uiColor -nc 4 -cw 1 120 -cw 2 120 -cw 3 120 -cw 4 120   $columnLayoutName;
 
-//checkboxes for each attr ////
+    //checkboxes for each attr ////
 
     int $ramp = `checkBox -q -v $particleRampCheckbox`;
     int $supress = `checkBox -q -v $particleSupressedCheckbox`;
 
-    string $attrs[] = `partioExportGuiListParticleAttrs  $particle "allPP" $ramp $supress `;   // uses a modified  version of listParticleAttrs with a separate list for dynExport
+    // uses a modified  version of listParticleAttrs with a separate list for dynExport
+    string $attrs[] = `partioExportGuiListParticleAttrs  $particle "allPP" $ramp $supress `;
 
     for ($attr in $attrs)
     {
-        if ($attr == "particleId") {}
-        else {
-
+        if ($attr == "particleId")
+        {
+        }
+        else
+        {
             $checkBoxName = ($particle+$attr+"checkBox");
-
             checkBox -l $attr -v 0 $checkBoxName;
         }
     }
@@ -236,125 +241,141 @@ global proc buildParticleEntry (string $particle, string $parent, int $color )
 }
 
 
-global proc dynExportSelectedparticles  (string $startFrame, string $endFrame, string $frameStep,
-										 string $partioExportOptionMenu,
-										 string $cacheDirCtrl)
+global proc dynExportSelectedparticles(string $startFrame,
+                                       string $endFrame,
+                                       string $frameStep,
+                                       string $partioExportOptionMenu,
+                                       string $cacheDirCtrl)
 {
-	global string $gMainProgressBar;  // This is defined on maya startup
+    global string $gMainProgressBar;  // This is defined on maya startup
 
-	// we have to do this here to clear out the  escape status before using the  gMainProgressBar just in case
-	// it was  holding on to the escape status for some reason so cycling thru it this way seemed to fix it
-	progressBar -edit
-	-beginProgress
-	-isInterruptable true
-	$gMainProgressBar;
-	progressBar -edit -endProgress  $gMainProgressBar;
+    // we have to do this here to clear out the  escape status before using the  gMainProgressBar just in case
+    // it was  holding on to the escape status for some reason so cycling thru it this way seemed to fix it
+    progressBar -edit -beginProgress -isInterruptable true $gMainProgressBar;
+    progressBar -edit -endProgress  $gMainProgressBar;
 
-
-    int $start = `intFieldGrp -q -v1 $startFrame`;
-    int $end  = `intFieldGrp  -q -v1 $endFrame`;
+    float $start = `floatFieldGrp -q -v1 $startFrame`;
+    float $end  = `floatFieldGrp  -q -v1 $endFrame`;
     float $step = `floatFieldGrp -q -v1 $frameStep`;
+    float $istep = 0.0;
     string $partioExportFormat = `optionMenuGrp -q -v  $partioExportOptionMenu`;
     string $cacheDir = `textFieldButtonGrp -q -text  $cacheDirCtrl`;
 
     int $perframe = 0;
 
+    if ($step <= 0 || $start >= $end)
+    {
+        $end = $start;
+    }
+    else
+    {
+        $istep = 1.0 / $step;
+    }
+
+    int $numFrames = 1 + ($end - $start) * $istep;
+    if ($perframe && $numFrames <= 1)
+    {
+        $perframe = 0;
+    }
+
     string $partioFormatString = `tolower $partioExportFormat `;
 
     string $particles[] = `ls -type particle`;
 
-    int $numFrames  = $end-$start;
     int $loopStartFrame = $start;
+    // Don't loop frames, leave it to partioExport command
     int $loopEndFrame = $start;
-
+    
     if ($perframe)
     {
         $loopEndFrame = $end;
         // we only want to bring up the progresswindow when we're using "perframe mode so we can escape cancel the export
-		progressBar -edit
-		-beginProgress
-		-isInterruptable true
-		-status "PartioExport per frame..."
-		-minValue $loopStartFrame
-		-maxValue $loopEndFrame
-		-step 1
-		$gMainProgressBar;
-
+        progressBar -edit
+                    -beginProgress
+                    -isInterruptable true
+                    -status "PartioExport per frame..."
+                    -minValue 0
+                    -maxValue ($numFrames - 1)
+                    -step 1
+                    $gMainProgressBar;
     }
 
-    for ($x = $loopStartFrame; $x <= $loopEndFrame; $x++)
+    for ($x=$loopStartFrame; $x<=$loopEndFrame; $x++)
     {
         currentTime $x;
 
-        int $currentFrame = `currentTime -q`;
+        float $currentFrame = `currentTime -q`;
 
         if ($perframe)
         {
             $start = $currentFrame;
             $end = $currentFrame;
-            if(`progressBar -query -isCancelled $gMainProgressBar`)
-			{
-				break;
-			}
-			progressBar -edit -step 1 $gMainProgressBar;
+            
+            if (`progressBar -query -isCancelled $gMainProgressBar`)
+            {
+                break;
+            }
+            
+            progressBar -edit -step 1 $gMainProgressBar;
         }
 
         for ($particle in $particles)
         {
-			// filters out ncloth crap because for whatever reason  ls -type particle returns all ncloth stuff too
-			if (`nodeType $particle` == "particle" || `nodeType $particle` == "nParticle")
-			{
-				$particleExportCheckbox = ($particle+"exportCheckBox");
+            // filters out ncloth crap because for whatever reason  ls -type particle returns all ncloth stuff too
+            if (`nodeType $particle` == "particle" || `nodeType $particle` == "nParticle")
+            {
+                $particleExportCheckbox = ($particle+"exportCheckBox");
 
-				int $selected  = `checkBox -q -v  $particleExportCheckbox`;
+                int $selected  = `checkBox -q -v  $particleExportCheckbox`;
 
-				if ($selected  >= 1)
-				{
-					string $cmd;
-					string $filePath;
+                if ($selected  >= 1)
+                {
+                    string $cmd;
+                    string $filePath;
 
-				string $particleOverrideName = `textFieldGrp -q -text ($particle+"overrideNameText")`;
-			// fix windows paths with escape characters
+                    string $particleOverrideName = `textFieldGrp -q -text ($particle+"overrideNameText")`;
+                    // fix windows paths with escape characters
 
 
-					$cmd = ("partioExport -mnf "+$start+" -mxf "+$end+" -fst "+$step+" -f "+$partioExportFormat+" -atr position -atr id ");
-					$filePath = `encodeString($cacheDir)`;
+                    $cmd = ("partioExport -mnf "+$start+" -mxf "+$end+" -fst "+$step+" -f "+$partioExportFormat+" -atr position -atr id ");
+                    $filePath = `encodeString($cacheDir)`;
 
-					string $attrs[] = `partioExportGuiListParticleAttrs $particle allPP 0 1`;
+                    string $attrs[] = `partioExportGuiListParticleAttrs $particle allPP 0 1`;
 
-					for ($attr in $attrs)
-					{
-						if ($attr == "particleId" || $attr == "position")
-						{}
-						else
-						{
-							$attrCheckbox =  ($particle+$attr+"checkBox");
-							if (`checkBox -exists $attrCheckbox`)
-							{
-								$val = `checkBox -q -v  $attrCheckbox`;
-								if ( $val >= 1)
-								{
-									$cmd += (" -atr "+$attr);
-								}
-							}
-						}
-					}
-					if (`size($particleOverrideName)` > 0 &&  $particleOverrideName != $particle )
-					{
-						$cmd += (" -fp \""+$particleOverrideName+"\"");
-					}
-					$cmd += (" -p \""+$filePath +"\" "+$particle);
-					evalEcho $cmd;
-				}
-				else
-				{
-					continue;
-				}
-			}
+                    for ($attr in $attrs)
+                    {
+                        if ($attr == "particleId" || $attr == "position")
+                        {
+                        }
+                        else
+                        {
+                            $attrCheckbox =  ($particle+$attr+"checkBox");
+                            if (`checkBox -exists $attrCheckbox`)
+                            {
+                                $val = `checkBox -q -v  $attrCheckbox`;
+                                if ( $val >= 1)
+                                {
+                                    $cmd += (" -atr "+$attr);
+                                }
+                            }
+                        }
+                    }
+                    if (`size($particleOverrideName)` > 0 &&  $particleOverrideName != $particle )
+                    {
+                        $cmd += (" -fp \""+$particleOverrideName+"\"");
+                    }
+                    $cmd += (" -p \""+$filePath +"\" "+$particle);
+                    evalEcho $cmd;
+                }
+                else
+                {
+                    continue;
+                }
+            }
         }
     }// end frame loop
 
-	progressBar -edit -endProgress  $gMainProgressBar;
+    progressBar -edit -endProgress  $gMainProgressBar;
 }
 
 /////////////////////////////////////////////
@@ -365,15 +386,14 @@ global proc  updatePath (string $cacheDirControl)
     string $result[] = `fileDialog2 -fileMode 3 `;
 
     textFieldButtonGrp -e -text $result[0]  $cacheDirControl;
-	optionVar -sv "partioExportGUICachePath" $result[0];
+    optionVar -sv "partioExportGUICachePath" $result[0];
 }
 
 
 /////////////////////////////////////////////
 //// update cacheDir
 
-global proc  updateCacheDir (string $cacheDirControl, string $manageCacheDirControl, string $dynGlobalsNode, int $switch)
-
+global proc updateCacheDir(string $cacheDirControl, string $manageCacheDirControl, string $dynGlobalsNode, int $switch)
 {
     string $mayaCacheDir;
 
@@ -400,23 +420,22 @@ global proc  updateCacheDir (string $cacheDirControl, string $manageCacheDirCont
 //////////////////////////////////////////////
 //// parse particle name
 
-global proc  string[]  parseCacheDir (string $cacheListing)
-
+global proc  string[] parseCacheDir(string $cacheListing)
 {
     string $parts[];
 
-/// parsing the following
-//  MainMast_sail_softParticleShape.250-125000x250.pdc
+    /// parsing the following
+    //  MainMast_sail_softParticleShape.250-125000x250.pdc
 
-// returns an array  of values...  0= particleShape, 1= first frame, 2= second frame
+    // returns an array  of values...  0= particleShape, 1= first frame, 2= second frame
 
     string $x[];
 
     tokenize $cacheListing "." $x;
 
-//int $size = `size $x[1]`;
-//$x[1] =  `substring  $x[1] 2  $size`;
-//$x[1] =  `substring  $x[1] 1  ($size-2)`;
+    //int $size = `size $x[1]`;
+    //$x[1] =  `substring  $x[1] 2  $size`;
+    //$x[1] =  `substring  $x[1] 1  ($size-2)`;
 
     string $negative = "";
     if (`substring $x[1] 1 1` == "-")
@@ -444,8 +463,10 @@ global proc  string[]  parseCacheDir (string $cacheListing)
 global proc string padzeros(int $num, int $l)
 {
     string $padString = string($num);
-    while (size($padString)<$l)
-        $padString="0"+$padString;
+    while (size($padString) < $l)
+    {
+        $padString = "0" + $padString;
+    }
     return $padString;
 };
 
@@ -453,55 +474,63 @@ global proc string padzeros(int $num, int $l)
 ////////////////////////////////////////////
 // partioExport versions of  these stolen from  autodesk listParticleAttrs.mel
 
-proc int isInitialStateAttr( string $attr )
+proc int isInitialStateAttr(string $attr)
 {
-    int $s = size( $attr );
-    if ( $s > 0 )
+    int $s = size($attr);
+    if ($s > 0)
     {
-        string $last = substring( $attr, $s, $s );
-        if ( $last == "0" )
+        string $last = substring($attr, $s, $s);
+        if ($last == "0")
+        {
             return 1;
+        }
     }
     return 0;
 }
 
-proc int isCachedAttr( string $attr )
+proc int isCachedAttr(string $attr)
 {
-    int $s = size( $attr );
+    int $s = size($attr);
 
-    if ( $s > 5 )
+    if ($s > 5)
     {
-        string $last5 = substring( $attr, $s - 4, $s );
-        if ( $last5 == "Cache" )
+        string $last5 = substring($attr, $s - 4, $s);
+        if ($last5 == "Cache")
+        {
             return 1;
+        }
     }
 
-    if ( $s > 6 )
+    if ($s > 6)
     {
-        string $first6 = substring( $attr, 1, 6 );
-        if ( $first6 == "cached" )
+        string $first6 = substring($attr, 1, 6);
+        if ($first6 == "cached")
+        {
             return 1;
+        }
     }
 
     return 0;
 }
 
-proc int isArrayAttr( string $node, string $attr )
+proc int isArrayAttr(string $node, string $attr)
 {
     string $typeStr = `getAttr -type ($node+"."+$attr)`;
-    int $s = size( $typeStr );
+    int $s = size($typeStr);
 
-    if ( $s > 5 )
+    if ($s > 5)
     {
-        string $last5 = substring( $typeStr, $s - 4, $s );
-        if ( $last5 == "Array" )
+        string $last5 = substring($typeStr, $s - 4, $s);
+        if ($last5 == "Array")
+        {
             return 1;
+        }
     }
 
     return 0;
 }
 
-proc int isSuppressedAttr( string $attr )
+proc int isSuppressedAttr(string $attr)
 {
     string $suppressedAttrs[];
     $suppressedAttrs =
@@ -520,54 +549,72 @@ proc int isSuppressedAttr( string $attr )
         "worldVelocityInObjectSpace"
     };
 
-    $suppressedAttrs = sort( $suppressedAttrs );
+    $suppressedAttrs = sort($suppressedAttrs);
 
-    if ( size($attr) == 0 )
+    if (size($attr) == 0)
+    {
         return 0;
+    }
 
     int $i;
-    for ( $i = 0; $i < size($suppressedAttrs); $i ++ )
+    for ($i = 0; $i < size($suppressedAttrs); $i++)
     {
-        int $cmp = strcmp( $suppressedAttrs[$i], $attr );
-        if ( $cmp == 0 )
+        int $cmp = strcmp($suppressedAttrs[$i], $attr);
+        if ($cmp == 0)
+        {
             return 1;
-        if ( $cmp > 0 )
+        }
+        if ($cmp > 0)
+        {
             return 0;
+        }
     }
 
     return 0;
 }
 
-proc int isValidAttr( string $node, string $attr, int $newOnly )
+proc int isValidAttr(string $node, string $attr, int $newOnly)
 {
-    if ( size( $attr ) ==0 )
-        return 0;
-
-    if ( $newOnly == 0 )
+    if (size($attr) == 0)
     {
-        if ( `attributeQuery -exists -node $node $attr` == 0 )
-            return 0;
+        return 0;
     }
 
-    if ( isInitialStateAttr( $attr ) )
-        return 0;
-
-    if ( isCachedAttr( $attr ) )
-        return 0;
-
-    if ( $newOnly == 0 )
+    if ($newOnly == 0)
     {
-        if ( `attributeQuery -multi -node $node $attr` == 1 )
+        if (`attributeQuery -exists -node $node $attr` == 0)
+        {
             return 0;
+        }
+    }
 
-        if ( isSuppressedAttr( $attr ) )
+    if (isInitialStateAttr($attr))
+    {
+        return 0;
+    }
+
+    if (isCachedAttr($attr))
+    {
+        return 0;
+    }
+
+    if ($newOnly == 0)
+    {
+        if (`attributeQuery -multi -node $node $attr` == 1)
+        {
             return 0;
+        }
+
+        if (isSuppressedAttr($attr))
+        {
+            return 0;
+        }
     }
 
     return 1;
 }
 
-global proc string[] partioExportGuiListParticleAttrs( string $particle, string $typeStr, int $showRamp, int $supressed)
+global proc string[] partioExportGuiListParticleAttrs(string $particle, string $typeStr, int $showRamp, int $supressed)
 //
 // type:
 //  typeStr: vectorArray, doubleArray, all, allPP, nonPP
@@ -590,7 +637,7 @@ global proc string[] partioExportGuiListParticleAttrs( string $particle, string 
 
         for ($customAttr in $customArrayAttrs)
         {
-            if ( `isValidAttr  $particle $customAttr  1`)
+            if (`isValidAttr  $particle $customAttr  1`)
             {
                 string $typeStr = `getAttr -type ($particle+"."+$customAttr)`;
 
@@ -641,66 +688,67 @@ global proc string[] partioExportGuiListParticleAttrs( string $particle, string 
         "particleId"
     };
 
-    switch ($typeStr) {
-    case "vectorArray":
+    switch ($typeStr)
     {
-        $attrs = $defaultVectorAttrs;
-        if ($showRamp)
+        case "vectorArray":
         {
-            $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
+            $attrs = $defaultVectorAttrs;
+            if ($showRamp)
+            {
+                $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
+            }
+            if ($supressed)
+            {
+                $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
+            }
+            $attrs =  stringArrayCatenate($attrs, $customVectorAttrs);
+            break;
         }
-        if ($supressed)
+        case "doubleArray":
         {
-            $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
+            $attrs = $defaultDoubleAttrs;
+            $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
+            break;
         }
-        $attrs =  stringArrayCatenate($attrs, $customVectorAttrs);
-        break;
-    }
-    case "doubleArray":
-    {
-        $attrs = $defaultDoubleAttrs;
-        $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
-        break;
-    }
-    case "allPP":
-    {
+        case "allPP":
+        {
 
-        $attrs = stringArrayCatenate($defaultVectorAttrs, $customVectorAttrs);
-        $attrs = stringArrayCatenate($attrs, $defaultDoubleAttrs);
-        $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
-        if ($showRamp)
-        {
-            $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
-        }
-        if ($supressed)
-        {
-            $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
-        }
+            $attrs = stringArrayCatenate($defaultVectorAttrs, $customVectorAttrs);
+            $attrs = stringArrayCatenate($attrs, $defaultDoubleAttrs);
+            $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
+            if ($showRamp)
+            {
+                $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
+            }
+            if ($supressed)
+            {
+                $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
+            }
 
-        break;
-    }
-    case "all":
-    {
-        $attrs = stringArrayCatenate($defaultVectorAttrs, $customVectorAttrs);
-        $attrs = stringArrayCatenate($attrs, $defaultDoubleAttrs);
-        $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
-        if ($showRamp)
-        {
-            $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
+            break;
         }
-        if ($supressed)
+        case "all":
         {
-            $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
-        }
-        $attrs = stringArrayCatenate($attrs,$customNonPPAttrs);
-        break;
+            $attrs = stringArrayCatenate($defaultVectorAttrs, $customVectorAttrs);
+            $attrs = stringArrayCatenate($attrs, $defaultDoubleAttrs);
+            $attrs = stringArrayCatenate($attrs, $customDoubleAttrs);
+            if ($showRamp)
+            {
+                $attrs = stringArrayCatenate($attrs, $defaultRampAttrs);
+            }
+            if ($supressed)
+            {
+                $attrs = stringArrayCatenate($attrs, $usefullSuppressedAttrs);
+            }
+            $attrs = stringArrayCatenate($attrs,$customNonPPAttrs);
+            break;
 
-    }
-    case "nonPP":
-    {
-        $attrs = $customNonPPAttrs;
-        break;
-    }
+        }
+        case "nonPP":
+        {
+            $attrs = $customNonPPAttrs;
+            break;
+        }
     }
 
     return $attrs;
