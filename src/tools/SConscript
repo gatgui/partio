@@ -68,6 +68,8 @@ elif sys.platform == "win32":
 
 if envglut["mac"]:
     frameworks=["-framework","OpenGL","-framework","GLUT"]
+    # Starting OSX 10.9, GLUT is deprecated, as warnings are treated as errors disable this warning
+    envglut.Append(CPPFLAGS=" -Wno-deprecated-declarations")
     envglut.Append(LINKFLAGS=frameworks)
 else:
     if sys.platform == "win32":

@@ -51,7 +51,7 @@ static const char *kAttribTypeL     = "-attributeType";
 using namespace std;
 using namespace Partio;
 
-bool PartioImport::hasSyntax()
+bool PartioImport::hasSyntax() const
 {
     return true;
 }

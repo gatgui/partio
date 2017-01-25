@@ -110,7 +110,7 @@ partioVisualizer::partioVisualizer()
       mLastInvertAlpha(false),
       mLastRadius(1.0),
       mFlipped(false),
-      frameChanged(false),
+      // frameChanged(false),
       drawError(false),
       mLastOffset(0)
 {

@@ -71,7 +71,7 @@ public:
 
     // Syntax methods
 
-    virtual bool		hasSyntax();
+    virtual bool		hasSyntax() const;
     static MSyntax		createSyntax();
 
     MStatus doIt(const MArgList&);

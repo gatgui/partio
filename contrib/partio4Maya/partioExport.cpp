@@ -67,7 +67,7 @@ using namespace std;
 
 
 
-bool PartioExport::hasSyntax()
+bool PartioExport::hasSyntax() const
 {
     return true;
 }

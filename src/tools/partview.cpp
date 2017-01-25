@@ -482,11 +482,11 @@ void timer(int time)
         if (deltaT > 200)  // initial key press delay
         {
 
-            if (keyStates['='])
+            if (keyStates[int('=')])
             {
                 pointSize += 0.5;
             }
-            else if (keyStates['-'])
+            else if (keyStates[int('-')])
             {
                 if (pointSize > .5)
                 {
@@ -494,14 +494,14 @@ void timer(int time)
                 }
             }
 
-            if (keyStates['z'])
+            if (keyStates[int('z')])
             {
                 if ( fov > 10)
                 {
                     fov -= 5;
                 }
             }
-            else if (keyStates['Z'])
+            else if (keyStates[int('Z')])
             {
                 if (fov < 180)
                 {
@@ -589,18 +589,18 @@ static void processNormalKeys(unsigned char key, int x, int y)
     anyKeyPressed = true;
     keyStates[key] = true;
 
-    if (keyStates['='])
+    if (keyStates[int('=')])
     {
         pointSize += 0.5;
     }
-    else if (keyStates['-'])
+    else if (keyStates[int('-')])
     {
         if (pointSize > .5)
         {
             pointSize -= 0.5;
         }
     }
-    if (keyStates['c'])
+    if (keyStates[int('c')])
     {
         if (useColor) {
             useColor = false;
@@ -610,7 +610,7 @@ static void processNormalKeys(unsigned char key, int x, int y)
         }
     }
 
-    if (keyStates['a'])
+    if (keyStates[int('a')])
     {
         if (useAlpha) {
             useAlpha = false;
@@ -620,14 +620,14 @@ static void processNormalKeys(unsigned char key, int x, int y)
         }
     }
 
-    if (keyStates['z'])
+    if (keyStates[int('z')])
     {
         if ( fov > 10)
         {
             fov -= 5;
         }
     }
-    else if (keyStates['Z'])
+    else if (keyStates[int('Z')])
     {
         if (fov < 180)
         {

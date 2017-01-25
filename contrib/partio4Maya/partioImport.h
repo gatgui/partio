@@ -71,7 +71,7 @@ class PartioImport : public MPxCommand
 		
 		static void* creator();
 		
-		virtual bool hasSyntax();
+		virtual bool hasSyntax() const;
 		static  MSyntax createSyntax();
 		
 		MStatus doIt(const MArgList&);

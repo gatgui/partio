@@ -195,7 +195,7 @@ private:
     float mLastRadius;
     bool mLastFlipStatus;
     bool mFlipped;
-    bool  frameChanged;
+    // bool  frameChanged;
     MStringArray attributeList;
     bool drawError;
     partio4Maya::CacheFiles mCacheFiles;

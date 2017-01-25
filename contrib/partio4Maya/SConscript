@@ -5,20 +5,28 @@ Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallP
 
 mayaVer = ARGUMENTS.get("maya-ver", "2013")
 mayaDir = ARGUMENTS.get("maya-dir", None)
+mayaInc = ARGUMENTS.get("maya-inc-dir", None)
+mayaLib = ARGUMENTS.get("maya-lib-dir", None)
 if mayaDir is None:
     if sys.platform == "win32":
         mayaDir = "C:/Program Files/Autodesk/Maya%s" % mayaVer
-        mayaInc = mayaDir + "/include"
-        mayaLib = mayaDir + "/lib"
+        if mayaInc is None:
+            mayaInc = mayaDir + "/include"
+        if mayaLib is None:
+            mayaLib = mayaDir + "/lib"
     elif sys.platform == "darwin":
         # TODO!
         mayaDir = "/Applications/Autodesk/maya%s" % mayaVer
-        mayaInc = mayaDir + "/devkit/include"
-        mayaLib = mayaDir + "/Maya.app/Contents/MacOS"
+        if mayaInc is None:
+            mayaInc = mayaDir + "/devkit/include"
+        if mayaLib is None:
+            mayaLib = mayaDir + "/Maya.app/Contents/MacOS"
     else:
         mayaDir = "/usr/autodesk/maya%s-x64" % mayaVer
-        mayaInc = mayaDir + "/include"
-        mayaLib = mayaDir + "/lib"
+        if mayaInc is None:
+            mayaInc = mayaDir + "/include"
+        if mayaLib is None:
+            mayaLib = mayaDir + "/lib"
 
 mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                     LIBPATH=[variant_build_abs + "/lib"],
