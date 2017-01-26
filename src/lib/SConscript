@@ -34,15 +34,19 @@
 import os
 import sys
 
-Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallPath')
+Import('env variant_build_abs variant_install_abs GetInstallPath')
 
-libenv = env.Clone(CPPDEFINES=["GTO_STATIC"],
+libenv = env.Clone(CPPDEFINES=["GTO_STATIC", "GTO_SUPPORT_ZIP"],
                    CPPPATH=["../../gto/lib"])
 
-if zlib_dir:
-    libenv.Append(CPPPATH=[zlib_dir + "/include"])
-elif sys.platform == "win32":
-    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+zlib_inc = libenv["ZLIB_INC_DIR"]
+if not zlib_inc:
+    zlib_inc = libenv["ZLIB_ROOT"]
+    if zlib_inc:
+        zlib_inc += "/include"
+
+if zlib_inc:
+    libenv.Append(CPPPATH=[zlib_inc])
 
 if sys.platform != "win32":
     libenv.Append(CXXFLAGS=["-pthread"])
@@ -59,6 +63,7 @@ def cppFiles(basePath, prefix):
 srcs = cppFiles(thisdir, "core") + cppFiles(thisdir, "io") + cppFiles(thisdir, "../../gto/lib/Gto")
 if sys.platform == "win32":
     srcs.append("../../gto/regex/src/regex.c")
+
 lib = libenv.Library("partio", srcs)
 
 libenv.Install(variant_build_abs + "/include", "Partio.h")

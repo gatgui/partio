@@ -49,3 +49,5 @@ env.*
 *.pdb
 /src/py/partio_*.cpp
 /src/py/partio.py
+SConstruct.options
+

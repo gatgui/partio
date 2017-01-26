@@ -31,25 +31,45 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 import os
+import glob
+
 Import('env variant_build_abs variant_install_abs')
 
-envtests=env.Clone(CPPPATH=[variant_build_abs+"/include"]
-              ,LIBPATH=["%s/lib"%variant_build_abs]
-              ,LIBS=["partio","z"])
+envtests = env.Clone(CPPPATH=[variant_build_abs + "/include", "../lib"],
+                     LIBPATH=["%s/lib" % variant_build_abs],
+                     LIBS=["partio", env["ZLIB_LIB_NAME"]])
+
+zlib_root = envtests["ZLIB_ROOT"]
+
+zlib_inc = envtests["ZLIB_INC_DIR"]
+if not zlib_inc and zlib_root:
+    zlib_inc += zlib_root + "/include"
+
+if zlib_inc:
+    envtests.Append(CPPPATH=[zlib_inc])
+
+zlib_lib = envtests["ZLIB_LIB_DIR"]
+if not zlib_lib and zlib_root:
+    zlib_lib += zlib_root + "/lib"
+
+if zlib_lib:
+    envtests.Append(LIBPATH=[zlib_lib])
 
 # Find all .cpp's and make them into programs with same names as cpp
-filter={"partview.cpp":0}  # don't compile this, it requires better env
-dir=Dir(".").srcnode().abspath
-files=[x for x in os.listdir(dir) if x.endswith(".cpp") and x not in filter]
-targets=[x.replace(".cpp","") for x in files]
+ignores = set(["testall.cpp"])  # don't compile this, it requires better env
+thisdir = Dir(".").srcnode().abspath
+mains = [x for x in os.listdir(thisdir) if x.endswith("_main.cpp") and x not in ignores]
+targets = [x.replace("_main.cpp", "") for x in mains]
 
 test_targets = []
 
-for i in range(len(files)):
-    file=files[i]
-    target=targets[i]
-    prog=envtests.Program(target,[file])
-    envtests.Install("../../tests",prog)
-    test_targets.append(envtests.Install(variant_install_abs+"/tests",prog))
+for i in range(len(mains)):
+    files = glob.glob(thisdir + "/" + mains[i].replace("_main.cpp", "*.cpp"))
+    if len(files) == 0:
+        continue
+    target = targets[i]
+    prog = envtests.Program(target, files)
+    envtests.Install("../../tests", prog)
+    test_targets.append(envtests.Install(variant_install_abs + "/tests", prog))
 
 envtests.Alias('test', test_targets)

@@ -33,17 +33,27 @@
 import os
 import sys
 
-Import('env variant_build_abs variant_install_abs zlib_dir zlib_name glut_dir')
+Import('env variant_build_abs variant_install_abs')
 
 envtools = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                      LIBPATH="%s/lib" % variant_build_abs,
-                     LIBS=["partio", zlib_name])
+                     LIBS=["partio", env["ZLIB_LIB_NAME"]])
 
-if zlib_dir:
-    envtools.Append(CPPPATH=[zlib_dir + "/include"])
-    envtools.Append(LIBPATH=[zlib_dir + "/lib/x64"])
-elif sys.platform == "win32":
-    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+zlib_root = envtools["ZLIB_ROOT"]
+
+zlib_inc = envtools["ZLIB_INC_DIR"]
+if not zlib_inc and zlib_root:
+    zlib_inc += zlib_root + "/include"
+
+if zlib_inc:
+    envtools.Append(CPPPATH=[zlib_inc])
+
+zlib_lib = envtools["ZLIB_LIB_DIR"]
+if not zlib_lib and zlib_root:
+    zlib_lib += zlib_root + "/lib"
+
+if zlib_lib:
+    envtools.Append(LIBPATH=[zlib_lib])
 
 # Find all .cpp's and make them into programs with same names as cpp
 ignores = set(["partview.cpp", "partconvert.cpp"])
@@ -60,29 +70,48 @@ for i in range(len(srcs)):
     tools.append(envtools.Install(variant_install_abs + "/bin", prog))
 
 envglut = envtools.Clone()
-if glut_dir:
-    envglut.Append(CPPPATH=[glut_dir + "/include"])
-    envglut.Append(LIBPATH=[glut_dir + "/lib/x64"])
-elif sys.platform == "win32":
-    print("WARNING: You may want to specify glut directory using with-glut=<path> (glut package can be found in winReqLibs folder)")
+
+glut_root = envglut["GLUT_ROOT"]
+
+glut_inc = envglut["GLUT_INC_DIR"]
+if not glut_inc and glut_root:
+    glut_inc = glut_root + "/include"
+
+if glut_inc:
+    envglut.Append(CPPPATH=[glut_inc])
+
+glut_lib = envglut["GLUT_LIB_DIR"]
+if not glut_lib and glut_root:
+    glut_lib = glut_root + "/lib"
+
+if glut_lib:
+    envglut.Append(LIBPATH=[glut_lib])
 
 if envglut["mac"]:
-    frameworks=["-framework","OpenGL","-framework","GLUT"]
     # Starting OSX 10.9, GLUT is deprecated, as warnings are treated as errors disable this warning
     envglut.Append(CPPFLAGS=" -Wno-deprecated-declarations")
-    envglut.Append(LINKFLAGS=frameworks)
+    envglut.Append(LINKFLAGS=["-framework", "OpenGL", "-framework", "GLUT"])
 else:
     if sys.platform == "win32":
-        envglut.Append(LIBS=["opengl32", "glu32", "freeglut"])
+        envglut.Append(LIBS=["opengl32", "glu32", envglut["GLUT_LIB_NAME"]])
     else:
-        envglut.Append(LIBS=["glut","GL","GLU"])
+        envglut.Append(LIBS=[envglut["GLUT_LIB_NAME"], "GL", "GLU"])
 
 prog = envglut.Program("partview", ["partview.cpp"])
 envglut.Install("../../bin", prog)
 tools.append(envglut.Install(variant_install_abs + "/bin", prog))
 
-if sys.platform == "win32":
-    if glut_dir:
-        tools.append(envglut.Install(variant_install_abs + "/bin", glut_dir + "/bin/x64/freeglut.dll"))
+if glut_root and sys.platform == "win32":
+    dllpath = None
+    dllname = envglut["GLUT_LIB_NAME"] + ".dll"
+    path = glut_root + "/" + dllname
+    if os.path.isfile(path):
+        dllpath = path
+    elif glut_lib:
+        path = glut_lib + "/" + dllname
+        if os.path.isfile(path):
+            dllpath = path
+    if dllpath:
+        tools.append(envglut.Install(variant_install_abs + "/bin", dllpath))
 
 env.Alias('tools', tools)

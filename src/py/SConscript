@@ -38,22 +38,30 @@ python_ver = sys.version[:3]
 python_inc = 'include/python%s' % python_ver
 python_mod = 'lib/python%s/site-packages' % python_ver
 
-Import('env variant_build_abs variant_install_abs zlib_dir zlib_name swig_dir')
+Import('env variant_build_abs variant_install_abs')
 
 envpy = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                   LIBPATH="%s/lib" % variant_build_abs,
-                  LIBS=["partio", zlib_name])
+                  LIBS=["partio", env["ZLIB_LIB_NAME"]])
 
-if zlib_dir:
-    envpy.Append(CPPPATH=[zlib_dir + "/include"])
-    envpy.Append(LIBPATH=[zlib_dir + "/lib/x64"])
-elif sys.platform == "win32":
-    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+zlib_root = envpy["ZLIB_ROOT"]
 
-if swig_dir:
-    envpy["SWIG"] = swig_dir + "/swig"
-elif sys.platform == "win32" and envpy.WhereIs("swig") is None:
-    print("WARNING: You may want to specify swig directory using with-swig=<path> (swig package can be found in winReqLibs folder)")
+zlib_inc = envpy["ZLIB_INC_DIR"]
+if not zlib_inc and zlib_root:
+    zlib_inc += zlib_root + "/include"
+
+if zlib_inc:
+    envpy.Append(CPPPATH=[zlib_inc])
+
+zlib_lib = envpy["ZLIB_LIB_DIR"]
+if not zlib_lib and zlib_root:
+    zlib_lib += zlib_root + "/lib"
+
+if zlib_lib:
+    envpy.Append(LIBPATH=[zlib_lib])
+
+if not envpy["SWIG"]:
+    envpy["SWIG"] = envpy.WhereIs("swig")
 
 swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall $SOURCE', suffix='.cc', src_suffix='.i')
 envpy.Append(BUILDERS={"SwigGen": swig_builder})

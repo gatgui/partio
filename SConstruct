@@ -15,8 +15,27 @@ arch = platform.machine()
 
 options.AddVariables(('CXX', 'C++ compiler', default_cxx),
                      ('mac', 'Is a mac', uos == 'Darwin'),
-                      EnumVariable("TYPE", "Type of build (e.g. optimize,debug)", "optimize",
-                                   allowed_values=("profile","optimize","debug")))
+                     EnumVariable("TYPE", "Type of build (e.g. optimize,debug)", "optimize",
+                                  allowed_values=("profile", "optimize", "debug")),
+                     ('SWIG', 'swig program path', ''),
+                     ('ZLIB_ROOT', 'zlib prefix', ''),
+                     ('ZLIB_INC_DIR', 'zlib includes path ($ZLIB_ROOT/include)', ''),
+                     ('ZLIB_LIB_DIR', 'zlib library path ($ZLIB_ROOT/lib', ''),
+                     ('ZLIB_LIB_NAME', 'zlib library name (by default, "zlib" on windows or "z" otherwise)', ('zlib' if sys.platform == 'win32' else 'z')),
+                     ('GLUT_ROOT', 'GLUT prefix', ''),
+                     ('GLUT_INC_DIR', 'GLUT includes path ($GLUT_ROOT/include)', ''),
+                     ('GLUT_LIB_DIR', 'GLUT library path ($GLUT_ROOT/lib)', ''),
+                     ('GLUT_LIB_NAME', 'GLUT library name (by default "glut64" on windows or "glut" otherwise', ('glut64' if sys.platform == 'win32' else 'glut')),
+                     ('MAYA_VERSION', 'Maya version', '2013'),
+                     ('MAYA_ROOT', 'Maya path', ''),
+                     ('MAYA_INC_DIR', 'Maya includes path', ''),
+                     ('MAYA_LIB_DIR', 'Maya libraries path', ''),
+                     ('MSVC_VERSION', 'Visual Studio compiler version (windows only)', '10.0'),
+                     BoolVariable('WITH_PYTHON', 'Build python binding', 'yes'),
+                     BoolVariable('WITH_TOOLS', 'Build command line tools', 'yes'),
+                     BoolVariable('WITH_MAYA', 'Build maya plugins', 'no'),
+                     BoolVariable('WITH_TESTS', 'Build partio library tests', 'no'),
+                     BoolVariable('WITH_DOCS', 'Generate documenation', 'no'))
 
 variant_basename = '%s-%s-%s' % (uos, ver, arch)
 
@@ -29,29 +48,7 @@ AddOption('--prefix',
           metavar='DIR',
           help='installation prefix')
 
-if sys.platform == "win32":
-    zlib_dir = ARGUMENTS.get("with-zlib", None)
-    if zlib_dir:
-        zlib_dir = os.path.abspath(zlib_dir)
-    zlib_name = "zlib"
-
-    swig_dir = ARGUMENTS.get("with-swig", None)
-    if swig_dir:
-        swig_dir = os.path.abspath(swig_dir)
-
-    glut_dir = ARGUMENTS.get("with-glut", None)
-    if glut_dir:
-        glut_dir = os.path.abspath(glut_dir)
-else:
-    zlib_dir = None
-    zlib_name = "z"
-    swig_dir = None
-    glut_dir = None
-
-if sys.platform == "win32":
-    env = Environment(options=options, prefix=GetOption('prefix'), MSVC_VERSION=ARGUMENTS.get("msvc-ver", "10.0"))
-else:
-    env = Environment(options=options, prefix=GetOption('prefix'))
+env = Environment(options=options, prefix=GetOption('prefix'))
 
 buildType = env["TYPE"]
 variant_basename += "-%s" % buildType
@@ -104,11 +101,18 @@ VariantDir(variant_build, '.', duplicate=0)
 def GetInstallPath():
     return variant_install_abs
 
-Export("env variant_build variant_build_abs variant_install_abs glut_dir swig_dir zlib_dir zlib_name GetInstallPath")
+Export("env variant_build variant_build_abs variant_install_abs GetInstallPath")
 
 env.SConscript(variant_build + "/src/lib/SConscript")
-env.SConscript(variant_build + "/src/tools/SConscript")
-env.SConscript(variant_build + "/src/tests/SConscript")
-env.SConscript(variant_build + "/src/doc/SConscript")
-env.SConscript(variant_build + "/src/py/SConscript")
-env.SConscript(variant_build + "/contrib/partio4Maya/SConscript")
+if env["WITH_TOOLS"]:
+    env.SConscript(variant_build + "/src/tools/SConscript")
+if env["WITH_PYTHON"]:
+    env.SConscript(variant_build + "/src/py/SConscript")
+if env["WITH_MAYA"]:
+    env.SConscript(variant_build + "/contrib/partio4Maya/SConscript")
+if env["WITH_TESTS"]:
+    env.SConscript(variant_build + "/src/tests/SConscript")
+if env["WITH_DOCS"]:
+    env.SConscript(variant_build + "/src/doc/SConscript")
+
+options.Save("SConstruct.options", env)

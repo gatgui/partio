@@ -1,46 +1,64 @@
 import os
 import sys
 
-Import('env variant_build_abs variant_install_abs zlib_name zlib_dir GetInstallPath')
-
-mayaVer = ARGUMENTS.get("maya-ver", "2013")
-mayaDir = ARGUMENTS.get("maya-dir", None)
-mayaInc = ARGUMENTS.get("maya-inc-dir", None)
-mayaLib = ARGUMENTS.get("maya-lib-dir", None)
-if mayaDir is None:
-    if sys.platform == "win32":
-        mayaDir = "C:/Program Files/Autodesk/Maya%s" % mayaVer
-        if mayaInc is None:
-            mayaInc = mayaDir + "/include"
-        if mayaLib is None:
-            mayaLib = mayaDir + "/lib"
-    elif sys.platform == "darwin":
-        # TODO!
-        mayaDir = "/Applications/Autodesk/maya%s" % mayaVer
-        if mayaInc is None:
-            mayaInc = mayaDir + "/devkit/include"
-        if mayaLib is None:
-            mayaLib = mayaDir + "/Maya.app/Contents/MacOS"
-    else:
-        mayaDir = "/usr/autodesk/maya%s-x64" % mayaVer
-        if mayaInc is None:
-            mayaInc = mayaDir + "/include"
-        if mayaLib is None:
-            mayaLib = mayaDir + "/lib"
+Import('env variant_build_abs variant_install_abs GetInstallPath')
 
 mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                     LIBPATH=[variant_build_abs + "/lib"],
-                    LIBS=["partio", zlib_name])
+                    LIBS=["partio", env["ZLIB_LIB_NAME"]])
 
-if zlib_dir:
-    mayaenv.Append(CPPPATH=[zlib_dir + "/include"])
-    mayaenv.Append(LIBPATH=[zlib_dir + "/lib/x64"])
-elif sys.platform == "win32":
-    print("WARNING: You may want to specify zlib directory using with-zlib=<path> (zlib package can be found in winReqLibs folder)")
+zlib_root = mayaenv["ZLIB_ROOT"]
+
+zlib_inc = mayaenv["ZLIB_INC_DIR"]
+if not zlib_inc and zlib_root:
+    zlib_inc += zlib_root + "/include"
+
+if zlib_inc:
+    mayaenv.Append(CPPPATH=[zlib_inc])
+
+zlib_lib = mayaenv["ZLIB_LIB_DIR"]
+if not zlib_lib and zlib_root:
+    zlib_lib += zlib_root + "/lib"
+
+if zlib_lib:
+    mayaenv.Append(LIBPATH=[zlib_lib])
+
+maya_root = mayaenv["MAYA_ROOT"]
+
+if not maya_root:
+    if sys.platform == "win32":
+        maya_root = "C:/Program Files/Autodesk/Maya%s" % mayaenv["MAYA_VERSION"]
+    elif sys.platform == "darwin":
+        maya_root = "/Applications/Autodesk/maya%s" % mayaenv["MAYA_VERSION"]
+    else:
+        maya_root = "/usr/autodesk/maya%s-x64" % mayaenv["MAYA_VERSION"]
+    if not os.path.isdir(maya_root):
+        print("Invalid Maya root directory '%s'. Use MAYA_VERSION= or MAYA_ROOT= flags." % maya_root)
+        maya_root = ""
+
+maya_inc = mayaenv["MAYA_INC_DIR"]
+
+if not maya_inc and maya_root:
+    if sys.platform == "darwin":
+        maya_inc = maya_root + "/devkit/include"
+    else:
+        maya_inc = maya_root + "/include"
+
+if maya_inc:
+    mayaenv.Append(CPPPATH=[maya_inc])
+
+maya_lib = mayaenv["MAYA_LIB_DIR"]
+
+if not maya_lib and maya_root:
+    if sys.platform == "darwin":
+        maya_lib = maya_root + "/Maya.app/Contents/MacOS"
+    else:
+        maya_lib = maya_root + "/lib"
+
+if maya_lib:
+    mayaenv.Append(LIBPATH=[maya_lib])
 
 mayaenv.Append(CPPDEFINES=["_BOOL", "REQUIRE_IOSTREAM"])
-mayaenv.Append(CPPPATH=[mayaInc])
-mayaenv.Append(LIBPATH=[mayaLib])
 mayaenv.Append(LIBS=["OpenMaya", "Foundation", "OpenMayaAnim", "OpenMayaFX", "OpenMayaUI", "OpenMayaRender"])
 if sys.platform == "win32":
     # use regex
@@ -68,8 +86,8 @@ def cppFiles(basePath):
 srcs = cppFiles(thisdir)
 plugin = mayaenv.LoadableModule("partio4Maya"+pluginExt, srcs)
 
-build_dir = variant_build_abs + "/maya/%s" % mayaVer
-out_dir = variant_install_abs + "/maya/%s" % mayaVer
+build_dir = variant_build_abs + "/maya/%s" % mayaenv["MAYA_VERSION"]
+out_dir = variant_install_abs + "/maya/%s" % mayaenv["MAYA_VERSION"]
 
 mayaenv.Install(build_dir + "/icons", Glob(thisdir + "/icons/*.png"))
 mayaenv.Install(build_dir + "/scripts", Glob(thisdir + "/scripts/*.mel"))

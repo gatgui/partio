@@ -139,7 +139,7 @@ namespace Internal {
         distSq.resize(2);
 
         const float origin[3] = {0.0f, 0.0f, 0.0f};
-        float findNPointsResult = fourPtTree.findNPoints( result, distSq, origin, 2, 1.0f );
+        /* float findNPointsResult = */ fourPtTree.findNPoints( result, distSq, origin, 2, 1.0f );
 
         const float* pt0 = fourPtTree.point( result[0] );
         const float expPt0[3] = {-0.5f, -0.5f, -0.5f};
