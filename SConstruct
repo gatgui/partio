@@ -15,12 +15,12 @@ arch = platform.machine()
 
 options.AddVariables(('CXX', 'C++ compiler', default_cxx),
                      ('mac', 'Is a mac', uos == 'Darwin'),
-                     EnumVariable("TYPE", "Type of build (e.g. optimize,debug)", "optimize",
+                     EnumVariable("TYPE", "Type of build", "optimize",
                                   allowed_values=("profile", "optimize", "debug")),
                      ('SWIG', 'swig program path', ''),
                      ('ZLIB_ROOT', 'zlib prefix', ''),
                      ('ZLIB_INC_DIR', 'zlib includes path ($ZLIB_ROOT/include)', ''),
-                     ('ZLIB_LIB_DIR', 'zlib library path ($ZLIB_ROOT/lib', ''),
+                     ('ZLIB_LIB_DIR', 'zlib library path ($ZLIB_ROOT/lib)', ''),
                      ('ZLIB_LIB_NAME', 'zlib library name (by default, "zlib" on windows or "z" otherwise)', ('zlib' if sys.platform == 'win32' else 'z')),
                      ('GLUT_ROOT', 'GLUT prefix', ''),
                      ('GLUT_INC_DIR', 'GLUT includes path ($GLUT_ROOT/include)', ''),
@@ -116,3 +116,6 @@ if env["WITH_DOCS"]:
     env.SConscript(variant_build + "/src/doc/SConscript")
 
 options.Save("SConstruct.options", env)
+
+Help(options.GenerateHelpText(env))
+
