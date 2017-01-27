@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "ParticleSimpleInterleave.h"
 #include "../io/readers.h"
 #include <iostream>
+#include <algorithm>
 #include <string>
 #include <cassert>
 namespace Partio{

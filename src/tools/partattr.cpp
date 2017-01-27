@@ -37,7 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <Partio.h>
 #include <iostream>
 #include <iomanip>
-#include <stdlib.h>
+#include <algorithm>
+#include <cstdlib>
 
 int main(int argc,char *argv[])
 {

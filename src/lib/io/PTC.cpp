@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "ZIP.h"
 
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <cfloat>

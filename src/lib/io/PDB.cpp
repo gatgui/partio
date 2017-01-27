@@ -43,11 +43,12 @@ namespace PDB{
 #include "PartioEndian.h"
 #include "ZIP.h"
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <cassert>
 #include <memory>
-#include <string.h>
+#include <cstring>
 namespace Partio
 {
 
