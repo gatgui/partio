@@ -82,10 +82,10 @@ else:
     else:
         envpy.Append(LIBS="python%s" % python_ver)
 
-src = envpy.SwigGen("partio_wrap.cc", "partio.i")
-lib = envpy.SharedLibrary("_partio", [src])
+gen = envpy.SwigGen(["partio_wrap.cc", "partio.py"], "partio.i")
+lib = envpy.SharedLibrary("_partio", [gen[0]])
 dp1 = envpy.Install(variant_install_abs + "/" + python_mod, lib)
-dp2 = envpy.Install(variant_install_abs + "/" + python_mod, "partio.py")
+dp2 = envpy.Install(variant_install_abs + "/" + python_mod, gen[1])
 envpy.Depends(dp1, dp2)
 
 envpy.Alias('python', [dp1, dp2])
