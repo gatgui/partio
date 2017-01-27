@@ -156,7 +156,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
     MString Format;
     MString fileNamePrefix;
     bool hasFilePrefix = false;
-    bool perFrame = false;
+    // bool perFrame = false;
     double frameStep = 1.0;
     bool subFrames = false;
     bool noXML = argData.isFlagSet(kNoXMLL);
@@ -240,7 +240,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
     if (argData.isFlagSet(kPerFrameFlagL))
     {
-        perFrame = true;
+        // perFrame = true;
     }
 
     MStringArray objects;

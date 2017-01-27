@@ -119,7 +119,7 @@ ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
     vector<ParticleAttribute> attrs;
 	unsigned int width = 0;
 	unsigned int points = 0;
-	bool binaryData = false;
+	// bool binaryData = false;
 
 	// we have to make some assumptions here
 	while(input->good())
@@ -181,7 +181,7 @@ ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
 				*input>>word;
 				if(word != "ascii")
 				{
-					binaryData = true;
+					// binaryData = true;
 				}
 			}
 		}

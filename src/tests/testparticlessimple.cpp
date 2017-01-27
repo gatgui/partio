@@ -48,9 +48,9 @@ Partio::ParticlesDataMutable* makeParticlesSimpleData()
     Partio::ParticleAttribute idAttr=foo.addAttribute("id",Partio::INT,1);
 
     std::cout << "Inserting points ...\n";
-    for (int i = 0; i < GRIDN; i++)
-        for (int j = 0; j < GRIDN; ++j)
-            for (int k = 0; k < GRIDN; ++k) {
+    for (size_t i = 0; i < GRIDN; i++)
+        for (size_t j = 0; j < GRIDN; ++j)
+            for (size_t k = 0; k < GRIDN; ++k) {
                 Partio::ParticleIndex pi = foo.addParticle();
                 float* pos = foo.dataWrite<float>(positionAttr, pi);
                 int* id = foo.dataWrite<int>(idAttr, pi);

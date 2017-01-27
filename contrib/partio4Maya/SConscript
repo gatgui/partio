@@ -31,7 +31,10 @@ if not maya_root:
     elif sys.platform == "darwin":
         maya_root = "/Applications/Autodesk/maya%s" % mayaenv["MAYA_VERSION"]
     else:
-        maya_root = "/usr/autodesk/maya%s-x64" % mayaenv["MAYA_VERSION"]
+        if float(mayaenv["MAYA_VERSION"]) < 2016:
+            maya_root = "/usr/autodesk/maya%s-x64" % mayaenv["MAYA_VERSION"]
+        else:
+            maya_root = "/usr/autodesk/maya%s" % mayaenv["MAYA_VERSION"]
     if not os.path.isdir(maya_root):
         print("Invalid Maya root directory '%s'. Use MAYA_VERSION= or MAYA_ROOT= flags." % maya_root)
         maya_root = ""
