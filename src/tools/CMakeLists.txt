@@ -1,23 +1,23 @@
 # PARTIO SOFTWARE
 # Copyright 2010 Disney Enterprises, Inc. All rights reserved
-#
+# 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-#
+# 
 # * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
-#
+# 
 # * Redistributions in binary form must reproduce the above copyright
 # notice, this list of conditions and the following disclaimer in
 # the documentation and/or other materials provided with the
 # distribution.
-#
+# 
 # * The names "Disney", "Walt Disney Pictures", "Walt Disney Animation
 # Studios" or the names of its contributors may NOT be used to
 # endorse or promote products derived from this software without
 # specific prior written permission from Walt Disney Pictures.
-#
+# 
 # Disclaimer: THIS SOFTWARE IS PROVIDED BY WALT DISNEY PICTURES AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
 # BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -33,13 +33,15 @@
 
 include_directories(
    ${CMAKE_SOURCE_DIR}/src/lib
-   ${GLUT_INCLUDE_DIR}
 )
 
+link_directories(${CMAKE_BINARY_DIR}/src/lib)
+
 IF(GLUT_FOUND AND OPENGL_FOUND)
+    INCLUDE_DIRECTORIES(${GLUT_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
     ADD_EXECUTABLE(partview partview.cpp)
     target_link_libraries(partview ${PARTIO_LIBRARIES} ${GLUT_LIBRARY} ${OPENGL_LIBRARY})
-    install(TARGETS  partview DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+    install(TARGETS  partview DESTINATION bin)
 ENDIF(GLUT_FOUND AND OPENGL_FOUND)
 
 ADD_EXECUTABLE(partinfo partinfo.cpp)
@@ -51,5 +53,4 @@ target_link_libraries(partconv ${PARTIO_LIBRARIES})
 ADD_EXECUTABLE(partattr partattr.cpp)
 target_link_libraries(partattr ${PARTIO_LIBRARIES})
 
-INSTALL(TARGETS partattr partconv partinfo DESTINATION ${EXECUTABLE_OUTPUT_PATH})
-
+install(TARGETS partattr partconv partinfo DESTINATION bin)

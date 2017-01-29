@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 
 #include <iostream>
-#include <sstream>
+#include "../core/Mutex.h"
 #include "../Partio.h"
 #include "readers.h"
 
@@ -42,6 +42,7 @@ namespace Partio{
 using namespace std;
 
 // reader and writer code
+PartioMutex initializationMutex;
 
 const map<string,READER_FUNCTION>&
 readers()
@@ -49,8 +50,11 @@ readers()
     static map<string,READER_FUNCTION> data;
     static bool initialized=false;
     if(!initialized){
+	initializationMutex.lock();
         data["bgeo"]=readBGEO;
+        data["bhclassic"]=readBGEO;
         data["geo"]=readGEO;
+        data["hclassic"]=readGEO;
         data["pdb"]=readPDB;
         data["pdb32"]=readPDB32;
         data["pdb64"]=readPDB64;
@@ -61,10 +65,12 @@ readers()
         data["prt"]=readPRT;
         data["bin"]=readBIN;
         data["pts"]=readPTS;
-		data["xyz"]=readXYZ;
-		data["pcd"]=readPCD;
-		data["icecache"]=readICECACHE;
+        data["ptf"]=readPTC;
+        data["itbl"]=readBGEO;
+        data["atbl"]=readBGEO;
         data["gto"]=readGTO;
+	initialized=true;
+	initializationMutex.unlock();
     }
     return data;
 }
@@ -75,8 +81,11 @@ writers()
     static map<string,WRITER_FUNCTION> data;
     static bool initialized=false;
     if(!initialized){
+	initializationMutex.lock();
         data["bgeo"]=writeBGEO;
+        data["bhclassic"]=writeBGEO;
         data["geo"]=writeGEO;
+        data["hclassic"]=writeGEO;
         data["pdb"]=writePDB;
         data["pdb32"]=writePDB32;
         data["pdb64"]=writePDB64;
@@ -86,21 +95,24 @@ writers()
         data["pdc"]=writePDC;
         data["prt"]=writePRT;
         data["bin"]=writeBIN;
-		data["pcd"]=writePCD;
-		data["icecache"]=writeICECACHE;
+        data["ptf"]=writePTC;
+        data["itbl"]=writeBGEO;
+        data["atbl"]=writeBGEO;
         data["gto"]=writeGTO;
+	initialized=true;
+	initializationMutex.unlock();
     }
     return data;
 }
 
 //! Gives extension of a file ignoring any trailing .gz
 //! i.e. for 'foo.pdb.gz' it gives 'pdb', for 'foo.pdb' it gives 'pdb'
-bool extensionIgnoringGz(const string& filename,string& ret,bool &endsWithGz)
+bool extensionIgnoringGz(const string& filename,string& ret,bool &endsWithGz,std::ostream& errorStream)
 {
     size_t period=filename.rfind('.');
     endsWithGz=false;
     if(period==string::npos){
-        cerr<<"Partio: No extension detected in filename"<<endl;
+        errorStream<<"Partio: No extension detected in filename"<<endl;
         return false;
     }
     string extension=filename.substr(period+1);
@@ -108,7 +120,7 @@ bool extensionIgnoringGz(const string& filename,string& ret,bool &endsWithGz)
         endsWithGz=true;
         size_t period2=filename.rfind('.',period-1);
         if(period2==string::npos){
-            cerr<<"Partio: No extension detected in filename"<<endl;
+            errorStream<<"Partio: No extension detected in filename"<<endl;
             return false;
         }
         string extension2=filename.substr(period2+1,period-period2-1);
@@ -120,48 +132,48 @@ bool extensionIgnoringGz(const string& filename,string& ret,bool &endsWithGz)
 }
 
 ParticlesDataMutable*
-read(const char* c_filename)
+read(const char* c_filename,bool verbose,std::ostream& errorStream)
 {
     string filename(c_filename);
     string extension;
     bool endsWithGz;
-    if(!extensionIgnoringGz(filename,extension,endsWithGz)) return 0;
-    map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
+    if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
+    map<string,READER_FUNCTION>::iterator i=readers().find(extension);
     if(i==readers().end()){
-        cerr<<"Partio: No reader defined for extension "<<extension<<endl;
+        errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
         return 0;
     }
-    return (*i->second)(c_filename,false);
+    return (*i->second)(c_filename,false,verbose ? &errorStream : 0);
 }
 
 ParticlesInfo*
-readHeaders(const char* c_filename)
+readHeaders(const char* c_filename,bool verbose,std::ostream& errorStream)
 {
     string filename(c_filename);
     string extension;
     bool endsWithGz;
-    if(!extensionIgnoringGz(filename,extension,endsWithGz)) return 0;
-    map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
+    if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
+    map<string,READER_FUNCTION>::iterator i=readers().find(extension);
     if(i==readers().end()){
-        cerr<<"Partio: No reader defined for extension "<<extension<<endl;
+        errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
         return 0;
     }
-    return (*i->second)(c_filename,true);
+    return (*i->second)(c_filename,true,verbose ? &errorStream : 0);
 }
 
 void
-write(const char* c_filename,const ParticlesData& particles,const bool forceCompressed)
+write(const char* c_filename,const ParticlesData& particles,const bool forceCompressed,bool verbose,std::ostream& errorStream)
 {
     string filename(c_filename);
     string extension;
     bool endsWithGz;
-    if(!extensionIgnoringGz(filename,extension,endsWithGz)) return;
-    map<string,WRITER_FUNCTION>::const_iterator i=writers().find(extension);
+    if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return;
+    map<string,WRITER_FUNCTION>::iterator i=writers().find(extension);
     if(i==writers().end()){
-        cerr<<"Partio: No writer defined for extension "<<extension<<endl;
+        errorStream<<"Partio: No writer defined for extension "<<extension<<endl;
         return;
     }
-    (*i->second)(c_filename,particles,forceCompressed || endsWithGz);
+    (*i->second)(c_filename,particles,forceCompressed || endsWithGz,verbose ? &errorStream : 0);
 }
 
 } // namespace Partio
