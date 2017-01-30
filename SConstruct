@@ -1,6 +1,9 @@
+import os
 import sys
 import glob
 import excons
+import excons.tools.gl as gl
+import excons.tools.glut as glut
 import excons.tools.zlib as zlib
 
 
@@ -41,8 +44,72 @@ prjs = [
     "cppflags": cmncppflags,
     "srcs": glob.glob("src/lib/core/*.cpp") +
             glob.glob("src/lib/io/*.cpp"),
-    "custom": cmncusts}
+    "custom": cmncusts
+   },
+   {"name": "partattr",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags,
+    "srcs": ["src/tools/partattr.cpp"],
+    "staticlibs": ["partio"],
+    "custom": cmncusts
+   },
+   {"name": "partinfo",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags,
+    "srcs": ["src/tools/partinfo.cpp"],
+    "staticlibs": ["partio"],
+    "custom": cmncusts
+   },
+   {"name": "partconv",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags,
+    "srcs": ["src/tools/partconv.cpp"],
+    "staticlibs": ["partio"],
+    "custom": cmncusts
+   },
+   {"name": "partview",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags + ("" if sys.platform != "darwin" else " -Wno-deprecated-declarations"),
+    "srcs": ["src/tools/partview.cpp"],
+    "staticlibs": ["partio"],
+    "custom": cmncusts + [glut.Require, gl.Require]
+   }
 ]
+
+# Tests
+tests = filter(lambda x: x.endswith("_main.cpp"), glob.glob("src/tests/*.cpp"))
+for test in tests:
+  name = os.path.basename(test).replace("_main.cpp", "")
+  srcs = glob.glob(test.replace("_main.cpp", "*.cpp"))
+  prjs.append({"name": name,
+               "type": "program",
+               "alias": "tests",
+               "prefix": "../tests",
+               "defs": cmndefs,
+               "cppflags": cmncppflags,
+               "incdirs": ["src/lib"],
+               "srcs": srcs,
+               "staticlibs": ["partio"],
+               "custom": cmncusts})
+for test in ["makecircle", "makeline", "testcluster"]:
+  prjs.append({"name": test,
+               "type": "program",
+               "alias": "tests",
+               "prefix": "../tests",
+               "defs": cmndefs,
+               "cppflags": cmncppflags,
+               "incdirs": ["src/lib"],
+               "srcs": ["src/tests/%s.cpp" % test],
+               "staticlibs": ["partio"],
+               "custom": cmncusts})
 
 build_opts = """PARTIO OPTIONS
   use-zlib=0|1   : Enable zlib compression.                 [1]
