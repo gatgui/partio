@@ -34,6 +34,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 */
 #ifndef KdTree_h
 #define KdTree_h
+#if defined(__clang__) && defined(_LIBCPP_VERSION)
+#include <numeric>
+#elif defined(__GNUC__)
+#include <ext/numeric>
+#endif
 
 namespace Partio
 {
@@ -284,8 +289,14 @@ void KdTree<k>::setPoints(const float* p, int n)
     } else _bbox.clear();
 
     // assign sequential ids
-    _ids.reserve(n);
-    while ((int)_ids.size() < n) _ids.push_back(_ids.size());
+    _ids.resize(n);
+#if defined(__clang__) && defined(_LIBCPP_VERSION)
+    std::iota(_ids.begin(), _ids.end(), 0);
+#elif defined(__GNUC__)
+    __gnu_cxx::iota(_ids.begin(), _ids.end(), 0);
+#endif
+//    _ids.reserve(n);
+//    while ((int)_ids.size() < n) _ids.push_back(_ids.size());
     _sorted = 0;
 }
 
@@ -348,7 +359,7 @@ int KdTree<k>::findNPoints(uint64_t *result, float *distanceSquared, float *fina
 {
     float radius_squared=maxRadius*maxRadius;
 
-    if (!size() || !_sorted || nPoints<1) return (int)radius_squared;
+    if (!size() || !_sorted || nPoints<1) return 0;
 
     NearestQuery query(result,distanceSquared,p,nPoints,radius_squared);
     findNPoints(query,0,size(),0);
