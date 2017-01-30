@@ -553,6 +553,7 @@ void print(const ParticlesData* particles);
 %feature("docstring","Creates a clustered particle set");
 ParticlesDataMutable* computeClustering(ParticlesDataMutable* particles,const int numNeighbors,const double radiusSearch,const double radiusInside,const int connections,const double density)=0;
 
+#ifdef PARTIO_USE_SEEXPR
 class PartioSe{
   public:
     PartioSe(ParticlesDataMutable* parts,const char* expr);
@@ -562,3 +563,4 @@ class PartioSe{
     bool runRange(int istart,int iend);
     void setTime(float val);
 };
+#endif
