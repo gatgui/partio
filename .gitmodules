@@ -1,3 +1,6 @@
 [submodule "gto"]
 	path = gto
 	url = git://github.com/gatgui/gto
+[submodule "excons"]
+	path = excons
+	url = git://github.com/gatgui/excons.git
