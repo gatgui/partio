@@ -138,7 +138,7 @@ read(const char* c_filename,bool verbose,std::ostream& errorStream)
     string extension;
     bool endsWithGz;
     if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
-    map<string,READER_FUNCTION>::iterator i=readers().find(extension);
+    map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
         errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
         return 0;
@@ -153,7 +153,7 @@ readHeaders(const char* c_filename,bool verbose,std::ostream& errorStream)
     string extension;
     bool endsWithGz;
     if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
-    map<string,READER_FUNCTION>::iterator i=readers().find(extension);
+    map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
         errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
         return 0;
@@ -168,7 +168,7 @@ write(const char* c_filename,const ParticlesData& particles,const bool forceComp
     string extension;
     bool endsWithGz;
     if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return;
-    map<string,WRITER_FUNCTION>::iterator i=writers().find(extension);
+    map<string,WRITER_FUNCTION>::const_iterator i=writers().find(extension);
     if(i==writers().end()){
         errorStream<<"Partio: No writer defined for extension "<<extension<<endl;
         return;

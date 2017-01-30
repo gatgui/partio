@@ -386,6 +386,9 @@ void addClusterAttribute(ParticlesDataMutable* cluster, ParticleAttribute& clust
             }
             break;
         }
+    case Partio::NONE:
+    default:
+        break;
     }
 }
 
@@ -420,7 +423,7 @@ computeClustering(ParticlesDataMutable* particles, const int numNeighbors,const 
             }
         }
     }
-    if (!hasPosAttr || posAttr.type != VECTOR && posAttr.type != FLOAT || posAttr.count !=3) {
+    if (!hasPosAttr || (posAttr.type != VECTOR && posAttr.type != FLOAT) || posAttr.count !=3) {
         cluster->release();
         return 0;
     }
