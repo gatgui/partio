@@ -5,6 +5,7 @@ import excons
 import excons.tools.gl as gl
 import excons.tools.glut as glut
 import excons.tools.zlib as zlib
+import excons.tools.python as python
 
 
 env = excons.MakeBaseEnv()
@@ -24,18 +25,23 @@ if excons.GetArgument("use-zlib", 1, int) != 0:
    cmncusts.append(zlib.Require)
    libdefs.append("PARTIO_USE_ZLIB")
 
+swig_opts = ""
+
 if excons.GetArgument("use-seexpr", 0, int) != 0:
+   cmndefs.append("PARTIO_USE_SEEXPR")
+   swig_opts = "-DPARTIO_USE_SEEXPR"
    # TODO
-   pass
 
 SConscript("gto/SConstruct")
 Import("RequireGto")
 cmncusts.append(RequireGto(static=True))
 
-partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", ["src/lib/Partio.h",
-                                                                         "src/lib/PartioAttribute.h",
-                                                                         "src/lib/PartioIterator.h",
-                                                                         "src/lib/PartioVec3.h"])
+partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", glob.glob("src/lib/*.h"))
+
+py_prefix = python.ModulePrefix() + "/" + python.Version()
+
+swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall %s $SOURCE' % swig_opts, suffix='.cpp', src_suffix='.i')
+env.Append(BUILDERS={"SwigGen": swig_builder})
 
 prjs = [
    {"name": "partio",
@@ -43,7 +49,8 @@ prjs = [
     "defs": cmndefs + libdefs,
     "cppflags": cmncppflags,
     "srcs": glob.glob("src/lib/core/*.cpp") +
-            glob.glob("src/lib/io/*.cpp"),
+            glob.glob("src/lib/io/*.cpp") +
+            glob.glob("src/lib/*.cpp"),
     "custom": cmncusts
    },
    {"name": "partattr",
@@ -84,6 +91,21 @@ prjs = [
    }
 ]
 
+# Python
+swig = excons.GetArgument("with-swig", None)
+if not swig:
+  swig = excons.Which("swig")
+if swig:
+  gen = env.SwigGen(["src/py/partio_wrap.cpp", "src/py/partio.py"], "src/py/partio.i")
+  prjs.append({"name": "_partio",
+               "type": "dynamicmodule",
+               "alias": "python",
+               "ext": python.ModuleExtension(),
+               "prefix": py_prefix,
+               "srcs": [gen[0]],
+               "staticlibs": ["partio"],
+               "custom": cmncusts + [python.SoftRequire],
+               "install": {py_prefix: [gen[1]]}})
 # Tests
 tests = filter(lambda x: x.endswith("_main.cpp"), glob.glob("src/tests/*.cpp"))
 for test in tests:
