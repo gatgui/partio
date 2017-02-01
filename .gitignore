@@ -1,5 +1,6 @@
 /.sconsign.dblite
 /kbuild.*
+/src/doc/doc
 /Linux-*
 /Darwin-*
 /build
@@ -20,4 +21,3 @@
 /bin
 /CMakeFiles
 Makefile
-/src/doc/*
