@@ -92,7 +92,7 @@ namespace Internal {
         setUp4ptData(fourPtTree);
 
         const Partio::BBox<3>& fourPtBox = fourPtTree.bbox();
-        float expMax[3] = {0.9, 1.0f, 1.0f};
+        float expMax[3] = {0.9f, 1.0f, 1.0f};
         for(size_t i = 0; i < 3; i++)
         {
             TESTEXPECT(fourPtBox.max[i] == expMax[i]);

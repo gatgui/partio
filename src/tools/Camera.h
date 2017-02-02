@@ -39,7 +39,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <PartioVec3.h>
 
 #ifdef PARTIO_WIN32
+#ifndef M_PI
 #define M_PI 3.141592653589793238
+#endif
 #endif
 
 class Camera
@@ -91,11 +93,11 @@ public:
             theta += float(-(x-this->x)*M_PI/180.);
             phi += float((y-this->y)*M_PI/180.);
         }else if(pan){
-            Partio::Vec3 view=Partio::Vec3(sin(theta)*cos(phi),sin(phi),cos(theta)*cos(phi));
-            Partio::Vec3 up=Partio::Vec3(sin(theta)*cos(phi+M_PI/2),sin(phi+M_PI/2),cos(theta)*cos(phi+M_PI/2));
+            Partio::Vec3 view=Partio::Vec3(float(sin(theta)*cos(phi)),float(sin(phi)),float(cos(theta)*cos(phi)));
+            Partio::Vec3 up=Partio::Vec3(float(sin(theta)*cos(phi+M_PI/2)),float(sin(phi+M_PI/2)),float(cos(theta)*cos(phi+M_PI/2)));
             Partio::Vec3 right=view.normalized().cross(up.normalized()).normalized();
-            lookAt+=right*distance*.001*(x-this->x);
-            lookAt+=up*distance*.001*(y-this->y);
+            lookAt+=right*distance*.001f*(x-this->x);
+            lookAt+=up*distance*.001f*(y-this->y);
         }else if(zoom){
             int move=y-this->y;
             distance *= float(exp(move*.01));
