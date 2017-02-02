@@ -12,8 +12,7 @@ use_zlib = (excons.GetArgument("use-zlib", 1, int) != 0)
 excons.SetArgument("use-zlib", 1 if use_zlib else 0)
 
 use_seexpr = (excons.GetArgument("use-seexpr", 0, int) != 0)
-if use_seexpr:
-   excons.SetArgument("use-c++11", 1)
+excons.SetArgument("use-c++11", 1 if use_seexpr else 0)
 
 
 env = excons.MakeBaseEnv()

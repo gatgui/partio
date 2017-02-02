@@ -30,3 +30,6 @@ Makefile
 /.build
 /src/py/partio.py
 /src/py/partio_wrap.cpp
+/src/doc/Doxyfile
+/test.*
+/circle.*

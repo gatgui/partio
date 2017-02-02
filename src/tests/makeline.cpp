@@ -69,6 +69,6 @@ int main(int argc,char *argv[])
 
     Partio::write("test.bgeo",*particles);
     Partio::write("test.geo",*particles);
-
+    Partio::write("test.gto",*particles);
 
 }
