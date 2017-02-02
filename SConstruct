@@ -156,7 +156,7 @@ for test in tests:
                 "libdirs": cmnlibdirs,
                 "staticlibs": ["partio"] + cmnlibs,
                 "custom": cmncusts})
-for test in ["makecircle", "makeline", "testcluster"]:
+for test in ["makecircle", "makeline", "testcluster", "testse"]:
    prjs.append({"name": test,
                 "type": "program",
                 "alias": "tests",
