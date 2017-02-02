@@ -38,16 +38,16 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 
 
 */
-#ifndef PARTIO_WIN32
+
 #ifdef PARTIO_USE_ZLIB
+
 #include "../Partio.h"
 #include "PartioEndian.h"
 #include "../core/ParticleHeaders.h"
 #include <string.h>
 
-
 //#define USE_ILMHALF    // use Ilm's Half library
-#define AUTO_CASES    // auto upcase ie:position => Position
+#define AUTO_CASES       // auto upcase i.e.: position => Position
 
 #ifdef USE_ILMHALF
 #include <half.h>
@@ -58,7 +58,7 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 #include <string>
 #include <memory>
 #include <zlib.h>
-#endif
+
 namespace Partio{
 
 #define OUT_BUFSIZE		(4096)
@@ -430,25 +430,29 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
 }
 
 }
-#else
+
+#else // PARTIO_USE_ZLIB
+
 #include "../Partio.h"
 #include <iostream>
 #include <fstream>
 
 
-namespace Partio{
-ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly)
+namespace Partio
 {
-    std::cerr<<"PRT not supported on windows"<<std::endl;
-    return 0;
-}
+    ParticlesDataMutable* readPRT(const char*, const bool, std::ostream*)
+    {
+        std::cerr << "PRT not supported." << std::endl;
+        return 0;
+    }
 
 
-bool writePRT(const char* filename,const ParticlesData& p,const bool /*compressed*/)
-{
-    std::cerr<<"PRT not supported on windows"<<std::endl;
-    return false;
-}
+    bool writePRT(const char* filename,const ParticlesData& p,const bool /*compressed*/,std::ostream* errorStream)
+    {
+        std::cerr << "PRT not supported." << std::endl;
+        return false;
+    }
 }
 
-#endif
+#endif // PARTIO_USE_ZLIB
+

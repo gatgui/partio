@@ -9,6 +9,7 @@ import excons.tools.python as python
 
 
 use_zlib = (excons.GetArgument("use-zlib", 1, int) != 0)
+excons.SetArgument("use-zlib", 1 if use_zlib else 0)
 
 use_seexpr = (excons.GetArgument("use-seexpr", 0, int) != 0)
 if use_seexpr:
@@ -27,7 +28,9 @@ cmnlibs = []
 cmncusts = []
 
 if sys.platform == "win32":
-   cmndefs.extend(["PARTIO_WIN32", "_USE_MATH_DEFINES", "NOMINMAX", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE"])
+   cmndefs.extend(["PARTIO_WIN32", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE"])
+   if excons.warnl != "all":
+     cmncppflags += " -wd4267 -wd4244"
 else:
    cmncppflags += " -Wno-unused-parameter"
 
@@ -123,6 +126,7 @@ swig = excons.GetArgument("with-swig", None)
 if not swig:
    swig = excons.Which("swig")
 if swig:
+   env["SWIG"] = swig
    gen = env.SwigGen(["src/py/partio_wrap.cpp", "src/py/partio.py"], "src/py/partio.i")
    prjs.append({"name": "_partio",
                 "type": "dynamicmodule",

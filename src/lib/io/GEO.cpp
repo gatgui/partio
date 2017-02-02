@@ -77,7 +77,7 @@ string scanString(istream& input)
     // TODO: this code doesn't properly check for FEOF condition
     char buf[4096];
     char *ptr=buf;
-    char c;
+    char c='\0';
     while(input.good()){
         input.get(c);
         if(!isspace(c)) break;

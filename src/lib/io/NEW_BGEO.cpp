@@ -391,6 +391,10 @@ struct BGEOMainParser:public JSONParser<BGEOMainParser>
         return false;
     }
 
+
+    BGEOMainParser();
+    BGEOMainParser(const BGEOMainParser&);
+    BGEOMainParser& operator=(const BGEOMainParser&);
 };
 
 /// This parser ignores everything it sees
@@ -417,6 +421,10 @@ struct BGEOParser:public JSONParser<BGEOParser>
     template<class T> bool uniformArray(const char* currKey,int length){
         return false;
     }
+
+    BGEOParser();
+    BGEOParser(const BGEOParser&);
+    BGEOParser& operator=(const BGEOParser&);
 };
 
 ParticlesDataMutable*  testRead(const char* filename)
