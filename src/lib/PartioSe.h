@@ -39,85 +39,169 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <SeExpression.h>
 #include <map>
 
-namespace Partio{
+namespace Partio
+{
 
 template<class T>
-class AttribVar:public SeExprVarRef
+class AttribVar : public SeExprVarRef
 {
-    Partio::ParticlesDataMutable* parts;
+private:
+    Partio::ParticlesDataMutable *parts;
     Partio::ParticleAttribute attr;
-    int& currentIndex;
+    int &currentIndex;
     int clampedCount;
-public:
-    AttribVar(Partio::ParticlesDataMutable* parts,
-        Partio::ParticleAttribute attr,int& currentIndex)
-        :parts(parts),attr(attr),currentIndex(currentIndex),clampedCount(std::min(attr.count,3))
-    {}
 
-    bool isVec(){return attr.count!=1;}
-    void eval(const SeExprVarNode* node,SeVec3d& result){
-        const T* ptr=parts->data<T>(attr,currentIndex);
-        //std::cerr<<"in eval for "<<attr.name<<" count is "<<clampedCount<<" cur "<<currentIndex<<std::endl;
-        for(int k=0;k<clampedCount;k++){
-            result[k]=ptr[k];
+public:
+    AttribVar(Partio::ParticlesDataMutable *parts,
+              Partio::ParticleAttribute attr,
+              int &currentIndex)
+        : parts(parts)
+        , attr(attr)
+        , currentIndex(currentIndex)
+        , clampedCount(std::min(attr.count, 3))
+    {
+    }
+
+    bool isVec()
+    {
+        return attr.count != 1;
+    }
+
+    void eval(const SeExprVarNode *node, SeVec3d &result)
+    {
+        const T* ptr = parts->data<T>(attr, currentIndex);
+        for (int k=0; k<clampedCount; k++)
+        {
+            result[k] = ptr[k];
         }
         // set any remaining fields (i.e. if clampedCount is 2)
-        for(int k=clampedCount;k<3;k++){
-            result[k]=0;
+        for( int k=clampedCount; k<3; k++)
+        {
+            result[k] = 0;
         }
     }
 };
+typedef std::map<std::string,AttribVar<int>*> IntVarMap;
+typedef std::map<std::string,AttribVar<float>*> FloatVarMap;
 
-struct SimpleVar:public SeExprVarRef{
+class SimpleVar : public SeExprVarRef
+{
+public:
     double val;
-    SimpleVar():val(0){}
-    bool isVec(){return false;}
-    void eval(const SeExprVarNode* node,SeVec3d& result){
-        result[0]=result[1]=result[2]=val;
+
+    SimpleVar()
+        : val(0)
+    {
+    }
+
+    bool isVec()
+    {
+        return false;
+    }
+    
+    void eval(const SeExprVarNode *node, SeVec3d& result)
+    {
+        result[0] = result[1] = result[2] = val;
     }
 };
 
 /// Class that maps back to the partio data
-template<class T> class VarToPartio;
+template<class T> class VarToPartio
+{
+private:
+    Partio::ParticlesDataMutable *parts;
+    const SeExprLocalVarRef *local;
+    Partio::ParticleAttribute attr;
+    int &currentIndex;
+    int clampedCount;
+
+public:
+    VarToPartio(Partio::ParticlesDataMutable *parts,
+                const SeExprLocalVarRef *local,
+                Partio::ParticleAttribute attr,
+                int &currentIndex)
+        : parts(parts)
+        , local(local)
+        , attr(attr)
+        , currentIndex(currentIndex)
+        , clampedCount(std::min(3, attr.count))
+    {
+    }
+
+    void mapBack()
+    {
+        T* ptr = parts->dataWrite<T>(attr, currentIndex);
+        for (int k=0; k<clampedCount; k++)
+        {
+            ptr[k] = local->val[k];
+        }
+        if (clampedCount == 1)
+        {
+            for (int k=clampedCount; k<attr.count; k++)
+            {
+                ptr[k] = ptr[clampedCount-1];
+            }
+        }
+        else
+        {
+            for (int k=clampedCount; k<attr.count; k++)
+            {
+                ptr[k] = 0;
+            }
+        }
+    }
+};
+typedef std::vector<VarToPartio<int>*> IntVarToPartio;
+typedef std::vector<VarToPartio<float>*> FloatVarToPartio;
 
 /// NOTE: This class is experimental and may be deleted/modified in future versions
-class PartioSe:public SeExpression{
+class PartioSe : public SeExpression
+{
+private:
     bool isPaired;
     int currentIndex;
     Partio::ParticleAttribute pairH1,pairH2;
     int pairIndex1,pairIndex2;
     Partio::ParticlesDataMutable* parts;
     Partio::ParticlesDataMutable* partsPairing;
-    typedef std::map<std::string,AttribVar<int>*> IntVarMap;
-    mutable IntVarMap intVars;
-    typedef std::map<std::string,AttribVar<float>*> FloatVarMap;
-    mutable FloatVarMap floatVars;
-
-    typedef std::vector<VarToPartio<int>*> IntVarToPartio;
-    typedef std::vector<VarToPartio<float>*> FloatVarToPartio;
+    IntVarMap intVars;
+    FloatVarMap floatVars;
     IntVarToPartio intVarToPartio;
     FloatVarToPartio floatVarToPartio;
-
-    mutable SimpleVar indexVar,countVar,timeVar;
+    SimpleVar indexVar,countVar,timeVar;
 
 public:
-    typedef  SeExpression::LocalVarTable::const_iterator LocalVarTableIterator;
+    typedef SeExpression::LocalVarTable::const_iterator LocalVarTableIterator;
     
-    PartioSe(Partio::ParticlesDataMutable* parts,const char* expr);
-    PartioSe(Partio::ParticlesDataMutable* partsPairing,Partio::ParticlesDataMutable* parts,const char* expr);
-    void addSet(const char* prefix,Partio::ParticlesDataMutable* parts,int& setIndex);
-    void addExport(const std::string& name,LocalVarTableIterator it,Partio::ParticlesDataMutable* parts,int& setIndex);
+    PartioSe(Partio::ParticlesDataMutable *parts,
+             const char *expr);
+    PartioSe(Partio::ParticlesDataMutable *partsPairing,
+             Partio::ParticlesDataMutable* parts,
+             const char *expr);
     virtual ~PartioSe();
+
+    void addSet(const char *suffix,
+                Partio::ParticlesDataMutable *parts,
+                int &setIndex);
+    void addExport(const std::string &name,
+                   LocalVarTableIterator it,
+                   Partio::ParticlesDataMutable *parts,
+                   int &setIndex);
+    void setTime(float val);
+
+    void run(int i);
+    bool runRange(int istart, int iend);
     bool runAll();
     bool runRandom();
-    void run(int i);
-    bool runRange(int istart,int iend);
-    void setTime(float val);
-    SeExprVarRef*  resolveVar(const std::string& s) const;
+    
+    virtual SeExprVarRef* resolveVar(const std::string &s) const;
+
 private:
+
     PartioSe(const PartioSe&);
     PartioSe& operator=(const PartioSe&);
 };
+
 }
 
 #endif
