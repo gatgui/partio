@@ -51,7 +51,11 @@ if use_seexpr:
    if sys.platform == "win32":
       cmndefs.append("SEEXPR_WIN32")
 
+
+excons.ignore_help = True
 SConscript("gto/SConstruct")
+excons.ignore_help = False
+
 Import("RequireGto")
 cmncusts.append(RequireGto(static=True))
 
