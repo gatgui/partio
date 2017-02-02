@@ -634,7 +634,7 @@ bool writeGTO(const char *filename, const ParticlesData &p, const bool compresse
       errorStream = &std::cerr;
    }
 
-   if (!gw->open(filename, Gto::Writer::BinaryGTO)) //(compressed ? Gto::Writer::BinaryGTO : Gto::Writer::TextGTO)))
+   if (!gw->open(filename, compressed ? Gto::Writer::CompressedGTO : Gto::Writer::BinaryGTO))
    {
       delete gw;
       *errorStream << "Partio: Unable to open file \"" << filename << "\"" << std::endl;
