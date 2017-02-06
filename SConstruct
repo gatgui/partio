@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 import excons
+import excons.tools.dl as dl
 import excons.tools.gl as gl
 import excons.tools.glut as glut
 import excons.tools.zlib as zlib
@@ -50,6 +51,8 @@ if use_seexpr:
    cmnlibs.append("SeExpr2")
    if sys.platform == "win32":
       cmndefs.append("SEEXPR_WIN32")
+   else:
+      cmncusts.append(dl.Require)
 
 
 excons.ignore_help = True
