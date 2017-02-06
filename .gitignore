@@ -33,3 +33,4 @@ Makefile
 /src/doc/Doxyfile
 /test.*
 /circle.*
+/testse.gto

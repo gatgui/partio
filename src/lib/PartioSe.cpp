@@ -42,75 +42,29 @@ namespace Partio
 {
 
 PartioSe::PartioSe(Partio::ParticlesDataMutable *parts,
-                   const char *expression)
+                   const char *expression,
+                   const char *attrSuffix,
+                   const char *fixedAttrPrefix)
     : SeExpr2::Expression(expression)
+    , currentIndex(0)
     , parts(parts)
-    , partsPairing(0)
-    , isPaired(false)
+    , outputIndex(-1)
 {
-    addSet("", parts, currentIndex);
-    isValid();
-    const SeExpression::LocalVarTable& vars = getLocalVars();
-    for (LocalVarTableIterator it=vars.begin(), itend=vars.end(); it != itend; ++it)
-    {
-        addExport(it->first, it, parts, currentIndex);
-    }   
-}
+    addParticleAttributes(fixedAttrPrefix, attrSuffix);
 
-PartioSe::PartioSe(Partio::ParticlesDataMutable *parts,
-                   Partio::ParticlesDataMutable *partsPairing,
-                   const char *expression)
-    : SeExpr2::Expression(expression)
-    , parts(parts)
-    , partsPairing(partsPairing)
-    , isPaired(true)
-{
-    parts->attributeInfo("p1", pairH1);
-    parts->attributeInfo("p2", pairH2);
-    // add variable references
-    addSet("_1", partsPairing, pairIndex1);
-    addSet("_2", partsPairing, pairIndex2);
-    addSet("", parts, currentIndex);
-    // checkout what we build
+    outputData.resize(3 * parts->numParticles());
+    outputIndex = blockCreator.registerVariable("__output", SeExpr2::ExprType().FP(3).Varying());
+    outputName = "";
+
+    setVarBlockCreator(&blockCreator);
+
+    setDesiredReturnType(SeExpr2::ExprType().FP(3).Varying());
+
     isValid();
-    // go through local variables and look for exports
-    const SeExpression::LocalVarTable& vars = getLocalVars();
-    for (LocalVarTableIterator it=vars.begin(), itend=vars.end(); it != itend; ++it)
-    {
-        size_t idx = it->first.rfind("_");
-        std::string realName = it->first;
-        int whichNum;
-        if (idx != std::string::npos)
-        {
-            realName = it->first.substr(0, idx);
-            whichNum = atoi(it->first.substr(idx+1).c_str());
-            if (whichNum != 1 && whichNum != 2)
-            {
-                std::cerr << "Expect _1 and _2 on the end of particle variables got " << whichNum << std::endl;;
-            }
-            else
-            {
-                int *idxPtr = (whichNum == 1 ? &pairIndex1 : &pairIndex2);
-                addExport(realName, it, partsPairing, *idxPtr);
-            }
-        }
-        else
-        {
-            addExport(realName, it, parts, currentIndex);
-        }
-    }
 }
 
 PartioSe::~PartioSe()
 {
-    for (IntVarToPartio::iterator it=intVarToPartio.begin(), itend=intVarToPartio.end(); it!=itend; ++it)
-    {
-        delete *it;
-    }
-    for (FloatVarToPartio::iterator it=floatVarToPartio.begin(), itend=floatVarToPartio.end(); it!=itend; ++it)
-    {
-        delete *it;
-    }
     for (IntVarMap::iterator it=intVars.begin(), itend=intVars.end(); it!=itend; ++it)
     {
         delete it->second;
@@ -121,115 +75,235 @@ PartioSe::~PartioSe()
     }
 }
 
-void PartioSe::addSet(const char *suffix, Partio::ParticlesDataMutable *parts, int &setIndex)
+void PartioSe::addParticleAttributes(const char *fixedPrefix, const char *suffix)
 {
-    int attrn = parts->numAttributes();
+    int attrn;
+
+    attrn = parts->numAttributes();
+
     for (int i=0; i<attrn; i++)
     {
         Partio::ParticleAttribute attr;
         parts->attributeInfo(i, attr);
         if (attr.type == Partio::FLOAT || attr.type == Partio::VECTOR)
         {
-            floatVars[attr.name + suffix] = new AttribVar<float>(parts, attr, setIndex);
+            floatVars[attr.name + suffix] = new PerParticleAttribVar<float>(parts, attr, currentIndex);
         }
         else if (attr.type == Partio::INT || attr.type == Partio::INDEXEDSTR)
         {
-            intVars[attr.name + suffix] = new AttribVar<int>(parts, attr, setIndex);
+            intVars[attr.name + suffix] = new PerParticleAttribVar<int>(parts, attr, currentIndex);
         }
         else
         {
-            std::cerr << "failed to map variable " << attr.name << std::endl;
+            std::cerr << "Failed to map variable " << attr.name << std::endl;
         }
     }
-}
 
-void PartioSe::addExport(const std::string &name, LocalVarTableIterator it, Partio::ParticlesDataMutable *parts, int &setIndex)
-{
-    Partio::ParticleAttribute attr;
-    bool isParticleAttr = parts->attributeInfo(name.c_str(), attr);
-    if (isParticleAttr)
+    attrn = parts->numFixedAttributes();
+
+    for (int i=0; i<attrn; i++)
     {
+        Partio::FixedAttribute attr;
+        parts->fixedAttributeInfo(i, attr);
         if (attr.type == Partio::FLOAT || attr.type == Partio::VECTOR)
         {
-            floatVarToPartio.push_back(new VarToPartio<float>(parts, &it->second, attr, setIndex));
+            floatVars[(fixedPrefix + attr.name) + suffix] = new FixedAttribVar<float>(parts, attr);
         }
-        else if(attr.type == Partio::INT || attr.type == Partio::INDEXEDSTR)
+        else if (attr.type == Partio::INT || attr.type == Partio::INDEXEDSTR)
         {
-            intVarToPartio.push_back(new VarToPartio<int>(parts, &it->second, attr, setIndex));
+            intVars[(fixedPrefix + attr.name) + suffix] = new FixedAttribVar<int>(parts, attr);
         }
         else
         {
-            std::cerr << "unsupported particle attribute type " << attr.name << std::endl;
+            std::cerr << "Failed to map fixed variable " << attr.name << std::endl;
         }
     }
 }
 
-void PartioSe::run(int i)
+SeExpr2::VarBlock PartioSe::createVarBlock()
 {
+    SeExpr2::VarBlock block = blockCreator.create();
+    block.Pointer(outputIndex) = outputData.data();
+    return block;
+}
+
+bool PartioSe::bindOutput(const char *partAttrName)
+{
+    Partio::ParticleAttribute hattr;
+
+    if (parts->attributeInfo(partAttrName, hattr))
+    {
+        if (hattr.type == Partio::INDEXEDSTR)
+        {
+            return false;
+        }
+    }
+
+    outputName = partAttrName;
+
+    return true;
+}
+
+void PartioSe::writeOutput()
+{
+    if (outputName == "")
+    {
+        return;
+    }
+
+    Partio::ParticleAttribute hattr;
+
+    if (!parts->attributeInfo(outputName.c_str(), hattr))
+    {
+        hattr = parts->addAttribute(outputName.c_str(), Partio::VECTOR, 3);
+    }
+
+    switch (hattr.type)
+    {
+    case Partio::FLOAT:
+    case Partio::VECTOR:
+        {
+            size_t i = 0; // input index
+            size_t o = 0; // output index
+            int a = (hattr.count < 3 ? hattr.count : 3);
+
+            float *out = parts->dataWrite<float>(hattr, 0);
+
+            for (int p=0; p<parts->numParticles(); ++p, i+=3, o+=hattr.count)
+            {
+                for (int d=0; d<a; ++d)
+                {
+                    out[o+d] = float(outputData[i+d]);
+                }
+                for (int d=a; d<hattr.count; ++d)
+                {
+                    out[o+d] = 0.0f;
+                }
+            }
+        }
+        break;
+    case Partio::INT:
+        {
+            size_t i = 0; // input index
+            size_t o = 0; // output index
+            int a = (hattr.count < 3 ? hattr.count : 3);
+
+            int *out = parts->dataWrite<int>(hattr, 0);
+
+            for (int p=0; p<parts->numParticles(); ++p, i+=3, o+=hattr.count)
+            {
+                for (int d=0; d<a; ++d)
+                {
+                    out[o+d] = int(outputData[i+d]);
+                }
+                for (int d=a; d<hattr.count; ++d)
+                {
+                    out[o+d] = 0;
+                }
+            }
+        }
+    default:
+        break;
+    }
+}
+
+bool PartioSe::run(int i, SeExpr2::VarBlock *block_p)
+{
+    if (!block_p)
+    {
+        return false;
+    }
+
     currentIndex = i;
-    indexVar.val = currentIndex;
-    if (isPaired)
+
+    indexVar.val = double(i);
+
+    evalMultiple(block_p, outputIndex, i, i+1);
+
+    return true;
+}
+
+bool PartioSe::run(int i)
+{
+    countVar.val = 1.0;
+
+    if (!isValid())
     {
-        pairIndex1 = parts->data<int>(pairH1, currentIndex)[0];
-        pairIndex2 = parts->data<int>(pairH2, currentIndex)[0];
-        if (pairIndex1 < 0 || pairIndex1 >= partsPairing->numParticles())
-        {
-            // TODO: return false
-            std::cerr << "Index " << currentIndex << " Referenced particle index " << pairIndex1 << " is out of bounds" << std::endl;
-        }
-        if (pairIndex2 < 0 || pairIndex2 >= partsPairing->numParticles())
-        {
-            std::cerr << "Index " << currentIndex << " Referenced particle index " << pairIndex2 << " is out of bounds" << std::endl;
-        }
+        std::cerr << "Not running expression because it is invalid" << std::endl;
+        std::cerr << parseError() << std::endl;
+        return false;
     }
-    SeVec3d value = evaluate();
-    // map data into the particles again
-    for (IntVarToPartio::iterator it=intVarToPartio.begin(), itend=intVarToPartio.end(); it!=itend; ++it)
+
+    if (i < 0 || i >= parts->numParticles())
     {
-        (*it)->mapBack();
+        std::cerr << "Invalid index " << i << " specified. Valid range is [0," << parts->numParticles() << ")" << std::endl;
+        return false;
     }
-    for (FloatVarToPartio::iterator it=floatVarToPartio.begin(), itend=floatVarToPartio.end(); it!=itend; ++it)
+
+    SeExpr2::VarBlock block = createVarBlock();
+
+    if (run(i, &block))
     {
-        (*it)->mapBack();
+        writeOutput();
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
 bool PartioSe::runRange(int istart, int iend)
 {
-    countVar.val = iend - istart + 1;
+    countVar.val = double(iend - istart);
+
     if (!isValid())
     {
         std::cerr << "Not running expression because it is invalid" << std::endl;
         std::cerr << parseError() << std::endl;
         return false;
     }
+
     if (istart < 0 || iend > parts->numParticles() || iend < istart)
     {
         std::cerr << "Invalid range [" << istart << "," << iend << ") specified. Max valid range is [0," << parts->numParticles() << ")" << std::endl;
         return false;
     }
-    for (int i=istart; i<iend; i++)
+
+    SeExpr2::VarBlock block = createVarBlock();
+
+    for (int i=istart; i<iend; ++i)
     {
-        run(i);
+        if (!run(i, &block))
+        {
+            return false;
+        }
     }
+
+    writeOutput();
+
     return true;
 }
 
 bool PartioSe::runRandom()
 {
-    countVar.val = parts->numParticles();
+    countVar.val = double(parts->numParticles());
+
     if (!isValid())
     {
         std::cerr << "Not running expression because it is invalid" << std::endl;
         std::cerr << parseError() << std::endl;
         return false;
     }
+
     std::vector<int> order(parts->numParticles());
-    for (size_t i=0; i<order.size(); i++)
+
+    for (size_t i=0; i<order.size(); ++i)
     {
         order[i]=i;
     }
-    for (size_t i=0; i<order.size(); i++)
+
+    for (size_t i=0; i<order.size(); ++i)
     {
         size_t other = float(rand()) / RAND_MAX * order.size();
         if (other >= order.size())
@@ -238,10 +312,19 @@ bool PartioSe::runRandom()
         }
         std::swap(order[i], order[other]);
     }
-    for (size_t i=0; i<order.size(); i++)
+
+    SeExpr2::VarBlock block = createVarBlock();
+
+    for (size_t i=0; i<order.size(); ++i)
     {
-        run(order[i]);
+        if (!run(order[i], &block))
+        {
+            return false;
+        }
     }
+
+    writeOutput();
+
     return true;
 }
 
@@ -252,21 +335,27 @@ bool PartioSe::runAll()
 
 void PartioSe::setTime(float val)
 {
-    timeVar.val = val;
+    timeVar.val = double(val);
 }
 
-SeExprVarRef* PartioSe::resolveVar(const std::string &s) const
+SeExpr2::ExprVarRef* PartioSe::resolveVar(const std::string &s) const
 {
-    IntVarMap::iterator iit = intVars.find(s);
+    SeExpr2::ExprVarRef *rv = blockCreator.resolveVar(s);
+    if (rv)
+    {
+        return rv;
+    }
+
+    IntVarMap::const_iterator iit = intVars.find(s);
     if (iit != intVars.end())
     {
         return iit->second;
     }
 
-    FloatVarMap::iterator it=floatVars.find(s);
+    FloatVarMap::const_iterator fit = floatVars.find(s);
     if (fit != floatVars.end())
     {
-        return it->second;
+        return fit->second;
     }
 
     if (s == "PT")
@@ -281,6 +370,7 @@ SeExprVarRef* PartioSe::resolveVar(const std::string &s) const
     {
         return &timeVar;
     }
+
     return 0;
 }
 
