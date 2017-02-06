@@ -400,6 +400,10 @@ struct JSONParser
         return JID_NULL;
     }
 
+
+    JSONParser();
+    JSONParser(const JSONParser&);
+    JSONParser& operator=(const JSONParser&);
 };
 
 
@@ -429,6 +433,10 @@ struct NULLParser:public JSONParser<NULLParser>
     template<class T> bool uniformArray(const char* currKey,int length){
         return false;
     }
+
+    NULLParser();
+    NULLParser(const NULLParser&);
+    NULLParser& operator=(const NULLParser&);
 };
 
 namespace{

@@ -36,7 +36,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <Partio.h>
 #include <iostream>
 #ifdef PARTIO_WIN32
+#ifndef M_PI
 #define M_PI (3.14159265359893238)
+#endif
 #endif
 
 #include <cmath>
@@ -70,8 +72,7 @@ int main(int argc,char *argv[])
     write("circle.00001.pda",*p);
     write("circle.00001.ptc",*p);
     write("circle.00001.rib",*p);
-    write("circle.00001.mc",*p);
-
+    write("circle.00001.gto",*p);
    
     p->release();
     return 0;

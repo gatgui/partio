@@ -1,121 +1,186 @@
 import os
 import sys
-import platform
+import glob
+import excons
+import excons.tools.dl as dl
+import excons.tools.gl as gl
+import excons.tools.glut as glut
+import excons.tools.zlib as zlib
+import excons.tools.python as python
 
-def kernel_version():
-    return os.popen("uname -r").read().strip().split('-')[0]
 
-default_cxx = ("g++" if sys.platform != "win32" else "cl")
+use_zlib = (excons.GetArgument("use-zlib", 1, int) != 0)
+excons.SetArgument("use-zlib", 1 if use_zlib else 0)
 
-options = Variables("SConstruct.options")
+use_seexpr = (excons.GetArgument("use-seexpr", 0, int) != 0)
+excons.SetArgument("use-c++11", 1 if use_seexpr else 0)
 
-uos = platform.system()
-ver = kernel_version()
-arch = platform.machine()
 
-options.AddVariables(('CXX', 'C++ compiler', default_cxx),
-                     ('mac', 'Is a mac', uos == 'Darwin'),
-                     EnumVariable("TYPE", "Type of build", "optimize",
-                                  allowed_values=("profile", "optimize", "debug")),
-                     ('SWIG', 'swig program path', ''),
-                     ('ZLIB_ROOT', 'zlib prefix', ''),
-                     ('ZLIB_INC_DIR', 'zlib includes path ($ZLIB_ROOT/include)', ''),
-                     ('ZLIB_LIB_DIR', 'zlib library path ($ZLIB_ROOT/lib)', ''),
-                     ('ZLIB_LIB_NAME', 'zlib library name (by default, "zlib" on windows or "z" otherwise)', ('zlib' if sys.platform == 'win32' else 'z')),
-                     ('GLUT_ROOT', 'GLUT prefix', ''),
-                     ('GLUT_INC_DIR', 'GLUT includes path ($GLUT_ROOT/include)', ''),
-                     ('GLUT_LIB_DIR', 'GLUT library path ($GLUT_ROOT/lib)', ''),
-                     ('GLUT_LIB_NAME', 'GLUT library name (by default "glut64" on windows or "glut" otherwise', ('glut64' if sys.platform == 'win32' else 'glut')),
-                     ('MAYA_VERSION', 'Maya version', '2013'),
-                     ('MAYA_ROOT', 'Maya path', ''),
-                     ('MAYA_INC_DIR', 'Maya includes path', ''),
-                     ('MAYA_LIB_DIR', 'Maya libraries path', ''),
-                     ('MSVC_VERSION', 'Visual Studio compiler version (windows only)', '10.0'),
-                     BoolVariable('WITH_PYTHON', 'Build python binding', 'yes'),
-                     BoolVariable('WITH_TOOLS', 'Build command line tools', 'yes'),
-                     BoolVariable('WITH_MAYA', 'Build maya plugins', 'no'),
-                     BoolVariable('WITH_TESTS', 'Build partio library tests', 'no'),
-                     BoolVariable('WITH_DOCS', 'Generate documenation', 'no'))
+env = excons.MakeBaseEnv()
 
-variant_basename = '%s-%s-%s' % (uos, ver, arch)
+libdefs = []
 
-AddOption('--prefix',
-          dest='prefix',
-          type='string',
-          nargs=1,
-          action='store',
-          default='',
-          metavar='DIR',
-          help='installation prefix')
+cmndefs = []
+cmncppflags = ""
+cmnincdirs = []
+cmnlibdirs = []
+cmnlibs = []
+cmncusts = []
 
-env = Environment(options=options, prefix=GetOption('prefix'))
-
-buildType = env["TYPE"]
-variant_basename += "-%s" % buildType
-env.Append(CPPDEFINES=["PARTIO_USE_ZLIB"])
-
-# --prefix is typically an absolute path, but we
-# should also allow relative paths for convenience.
-
-# prefix is the installation prefix, e.g. /usr
-# variant_install_abs is the path to the install root.
-
-prefix = GetOption('prefix') or os.path.join('dist', variant_basename)
-if os.path.isabs(prefix):
-    variant_install_abs = prefix
+if sys.platform == "win32":
+   cmndefs.extend(["PARTIO_WIN32", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE"])
+   if excons.warnl != "all":
+     cmncppflags += " -wd4267 -wd4244"
 else:
-    variant_install_abs = os.path.join(Dir(".").abspath, prefix)
+   cmncppflags += " -Wno-unused-parameter"
 
-# variant_build_abs is the path to the temporary build directory.
-variant_build = os.path.join('build', variant_basename)
-variant_build_abs = os.path.join(Dir(".").abspath, variant_build)
+if use_zlib:
+   cmncusts.append(zlib.Require)
+   libdefs.append("PARTIO_USE_ZLIB")
 
-if env["mac"] == True:
-    env.Append(CPPDEFINES=["__DARWIN__"])
-    #env.Append(LINKFLAGS=["-m32"])
+swig_opts = ""
 
-if default_cxx == "g++":
-    if env["TYPE"] == "optimize":
-        env.Append(CXXFLAGS=" -fPIC -DNDEBUG -O3 -fno-strict-aliasing -Wall -Werror -Wstrict-aliasing=0 -mfpmath=sse -msse3")
-    elif env["TYPE"] == "profile":
-        env.Append(CXXFLAGS=" -fPIC -DNDEBUG -O3 -fno-strict-aliasing -Wall -Werror -Wstrict-aliasing=0 -mfpmath=sse -msse3 -g -fno-omit-frame-pointer")
-    elif env["TYPE"] == "debug":
-        env.Append(CXXFLAGS=" -fPIC -D_DEBUG -O0 -g -Wall -Werror -Wstrict-aliasing=0")
-elif default_cxx == "cl":
-    env.Append(CXXFLAGS=" /W3 /GR /EHsc")
-    env.Append(CPPDEFINES=["_CRT_SECURE_NO_WARNINGS"])
-    if env["TYPE"] == "optimize":
-        env.Append(CXXFLAGS=" /O2 /MD /DNDEBUG")
-        env.Append(LINKFLAGS=" /release /incremental:no /opt:ref /opt:icf")
-    elif env["TYPE"] == "profile":
-        env.Append(CXXFLAGS=" /Od /Zi /Gm /MD /DNDEBUG")
-        env.Append(LINKFLAGS=" /release /incremental /opt:noref /opt:noicf")
-    elif env["TYPE"] == "debug":
-        env.Append(CXXFLAGS=" /Od /Zi /Gm /MDd /D_DEBUG")
-        env.Append(LINKFLAGS=" /debug /incremental")
+if use_seexpr:
+   cmndefs.append("PARTIO_USE_SEEXPR")
+   swig_opts = "-DPARTIO_USE_SEEXPR"
+   seexpr_inc, seexpr_lib = excons.GetDirs("seexpr")
+   if seexpr_inc:
+      cmnincdirs.append(seexpr_inc)
+   if seexpr_lib:
+      cmnlibdirs.append(seexpr_lib)
+   cmnlibs.append("SeExpr2")
+   if sys.platform == "win32":
+      cmndefs.append("SEEXPR_WIN32")
+   else:
+      cmncusts.append(dl.Require)
 
 
-VariantDir(variant_build, '.', duplicate=0)
+excons.ignore_help = True
+SConscript("gto/SConstruct")
+excons.ignore_help = False
 
+Import("RequireGto")
+cmncusts.append(RequireGto(static=True))
 
-def GetInstallPath():
-    return variant_install_abs
+partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", glob.glob("src/lib/*.h"))
 
-Export("env variant_build variant_build_abs variant_install_abs GetInstallPath")
+py_prefix = python.ModulePrefix() + "/" + python.Version()
 
-env.SConscript(variant_build + "/src/lib/SConscript")
-if env["WITH_TOOLS"]:
-    env.SConscript(variant_build + "/src/tools/SConscript")
-if env["WITH_PYTHON"]:
-    env.SConscript(variant_build + "/src/py/SConscript")
-if env["WITH_MAYA"]:
-    env.SConscript(variant_build + "/contrib/partio4Maya/SConscript")
-if env["WITH_TESTS"]:
-    env.SConscript(variant_build + "/src/tests/SConscript")
-if env["WITH_DOCS"]:
-    env.SConscript(variant_build + "/src/doc/SConscript")
+swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall %s $SOURCE' % swig_opts, suffix='.cpp', src_suffix='.i')
+env.Append(BUILDERS={"SwigGen": swig_builder})
 
-options.Save("SConstruct.options", env)
+prjs = [
+   {"name": "partio",
+    "type": "staticlib",
+    "defs": cmndefs + libdefs,
+    "cppflags": cmncppflags,
+    "incdirs": cmnincdirs,
+    "srcs": glob.glob("src/lib/core/*.cpp") +
+            glob.glob("src/lib/io/*.cpp") +
+            glob.glob("src/lib/*.cpp"),
+    "custom": cmncusts
+   },
+   {"name": "partattr",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "incdirs": cmnincdirs,
+    "cppflags": cmncppflags,
+    "incdirs": cmnincdirs,
+    "srcs": ["src/tools/partattr.cpp"],
+    "libdirs": cmnlibdirs,
+    "staticlibs": ["partio"] + cmnlibs,
+    "custom": cmncusts
+   },
+   {"name": "partinfo",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags,
+    "incdirs": cmnincdirs,
+    "srcs": ["src/tools/partinfo.cpp"],
+    "libdirs": cmnlibdirs,
+    "staticlibs": ["partio"] + cmnlibs,
+    "custom": cmncusts
+   },
+   {"name": "partconv",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags,
+    "incdirs": cmnincdirs,
+    "srcs": ["src/tools/partconv.cpp"],
+    "libdirs": cmnlibdirs,
+    "staticlibs": ["partio"] + cmnlibs,
+    "custom": cmncusts
+   },
+   {"name": "partview",
+    "type": "program",
+    "alias": "tools",
+    "defs": cmndefs,
+    "cppflags": cmncppflags + ("" if sys.platform != "darwin" else " -Wno-deprecated-declarations"),
+    "incdirs": cmnincdirs,
+    "srcs": ["src/tools/partview.cpp"],
+    "libdirs": cmnlibdirs,
+    "staticlibs": ["partio"] + cmnlibs,
+    "custom": cmncusts + [glut.Require, gl.Require]
+   }
+]
 
-Help(options.GenerateHelpText(env))
+# Python
+swig = excons.GetArgument("with-swig", None)
+if not swig:
+   swig = excons.Which("swig")
+if swig:
+   env["SWIG"] = swig
+   gen = env.SwigGen(["src/py/partio_wrap.cpp", "src/py/partio.py"], "src/py/partio.i")
+   prjs.append({"name": "_partio",
+                "type": "dynamicmodule",
+                "alias": "python",
+                "ext": python.ModuleExtension(),
+                "prefix": py_prefix,
+                "defs": cmndefs,
+                "cppflags": cmncppflags,
+                "incdirs": cmnincdirs,
+                "srcs": [gen[0]],
+                "libdirs": cmnlibdirs,
+                "staticlibs": ["partio"] + cmnlibs,
+                "custom": cmncusts + [python.SoftRequire],
+                "install": {py_prefix: [gen[1]]}})
+# Tests
+tests = filter(lambda x: x.endswith("_main.cpp"), glob.glob("src/tests/*.cpp"))
+for test in tests:
+   name = os.path.basename(test).replace("_main.cpp", "")
+   srcs = glob.glob(test.replace("_main.cpp", "*.cpp"))
+   prjs.append({"name": name,
+                "type": "program",
+                "alias": "tests",
+                "prefix": "../tests",
+                "defs": cmndefs,
+                "cppflags": cmncppflags,
+                "incdirs": cmnincdirs + ["src/lib"],
+                "srcs": srcs,
+                "libdirs": cmnlibdirs,
+                "staticlibs": ["partio"] + cmnlibs,
+                "custom": cmncusts})
+for test in ["makecircle", "makeline", "testcluster", "testse"]:
+   prjs.append({"name": test,
+                "type": "program",
+                "alias": "tests",
+                "prefix": "../tests",
+                "defs": cmndefs,
+                "cppflags": cmncppflags,
+                "incdirs": cmnincdirs + ["src/lib"],
+                "srcs": ["src/tests/%s.cpp" % test],
+                "libdirs": cmnlibdirs, 
+                "staticlibs": ["partio"] + cmnlibs,
+                "custom": cmncusts})
 
+build_opts = """PARTIO OPTIONS
+  use-zlib=0|1   : Enable zlib compression.                 [1]
+  use-seexpr=0|1 : Enable particle expression using SeExpr. [0]"""
+excons.AddHelpOptions(partio=build_opts)
+
+tgts = excons.DeclareTargets(env, prjs)
+
+env.Depends(tgts["partio"], partio_headers)

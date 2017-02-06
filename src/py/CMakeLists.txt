@@ -1,23 +1,23 @@
 # PARTIO SOFTWARE
 # Copyright 2010 Disney Enterprises, Inc. All rights reserved
-#
+# 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-#
+# 
 # * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
-#
+# 
 # * Redistributions in binary form must reproduce the above copyright
 # notice, this list of conditions and the following disclaimer in
 # the documentation and/or other materials provided with the
 # distribution.
-#
+# 
 # * The names "Disney", "Walt Disney Pictures", "Walt Disney Animation
 # Studios" or the names of its contributors may NOT be used to
 # endorse or promote products derived from this software without
 # specific prior written permission from Walt Disney Pictures.
-#
+# 
 # Disclaimer: THIS SOFTWARE IS PROVIDED BY WALT DISNEY PICTURES AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
 # BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -31,23 +31,25 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-FIND_PACKAGE(NumPy)
 
 FIND_PACKAGE(SWIG)
-IF(SWIG_FOUND)
+#IF(SWIG_FOUND) 
 FIND_PACKAGE(PythonLibs)
+SET(TEST1 "test1" CACHE STRING "test val 1" FORCE)
 IF(PYTHONLIBS_FOUND)
 
 INCLUDE(${SWIG_USE_FILE})
 
-EXECUTE_PROCESS( COMMAND python -c "import sys;print"%s.%s"%sys.version_info[0:2]" OUTPUT_VARIABLE PYTHON_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+EXECUTE_PROCESS(COMMAND python -c "import sys;print('%s.%s'%sys.version_info[0:2])"
+                OUTPUT_VARIABLE PYTHON_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+SET(TEST1 "test2" CACHE STRING "test val 2" FORCE)
 
 INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/src/lib)
 
 SET(CMAKE_SWIG_FLAGS "")
 
@@ -55,24 +57,17 @@ SET(CMAKE_SWIG_FLAGS "")
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/py)
 SET(CMAKE_SWIG_OUTDIR ${PROJECT_BINARY_DIR}/py)
 
+INCLUDE_DIRECTORIES(${SEEXPR_INCLUDE_PATH})
 SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES CPLUSPLUS ON)
 SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES SWIG_FLAGS "-includeall")
-
-IF(NUMPY_FOUND)
-  INCLUDE_DIRECTORIES(${NUMPY_INCLUDE_DIRS})
-	ADD_DEFINITIONS (-DPARTIO_USE_NUMPY)
-	SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES SWIG_FLAGS "-DPARTIO_USE_NUMPY")
-ENDIF(NUMPY_FOUND)
-
+LINK_DIRECTORIES(${SEEXPR_LINK_PATH})
 SWIG_ADD_MODULE(partio python partio.i)
-SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio)
+SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio partioSe ${SEEXPR_LIBS})
 
-SET(PYTHON_OUTPUT_PATH	   ${CMAKE_SOURCE_DIR}/build-${PARTIO_BUILD_PLATFORM}/py)
-SET(PYTHON_DEST ${PYTHON_OUTPUT_PATH}/${PARTIO_BUILD_PLATFORM}/python${PYTHON_VERSION}/site-packages )
-
+SET(PYTHON_DEST "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION}/site-packages" )
 INSTALL(TARGETS _partio DESTINATION ${PYTHON_DEST})
 INSTALL(FILES ${CMAKE_BINARY_DIR}/${outdir}/py/partio.py  DESTINATION ${PYTHON_DEST})
+INSTALL(FILES partio.i DESTINATION share/swig)
 
 ENDIF(PYTHONLIBS_FOUND)
-ENDIF(SWIG_FOUND)
-
+#ENDIF(SWIG_FOUND)

@@ -80,7 +80,7 @@ void test_ParticlesSimple()
     {
         std::vector<uint64_t> indices;
         std::vector<float> dists;
-        float point[3] = {0.51, 0.52, 0.53};
+        float point[3] = {0.51f, 0.52f, 0.53f};
 
         foo->findNPoints(point, 5, 0.15f, indices, dists);
         TESTEXPECT (indices.size() == 5);
@@ -103,7 +103,7 @@ void test_ParticlesSimple()
     {
         uint64_t indices[10];
         float dists[10];
-        float point[3] = {0.51, 0.52, 0.53};
+        float point[3] = {0.51f, 0.52f, 0.53f};
 
         float finalDist;
         int returned=foo->findNPoints(point, 5, 0.15f, indices, dists,&finalDist);

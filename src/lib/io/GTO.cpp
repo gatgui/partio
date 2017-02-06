@@ -512,28 +512,33 @@ public:
 protected: 
 };
 
-ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly)
+ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly, std::ostream* errorStream)
 {
    ParticlesDataMutable *particles = (headersOnly ? new ParticleHeaders() : create());
-   
+
    PartioGtoReader gr(particles, headersOnly);
    
+   if (!errorStream)
+   {
+      errorStream = &std::cerr;
+   }
+
    if (!gr.open(filename))
    {
-      std::cerr << "Partio: Unable to open file \"" << filename << "\"" << std::endl;
+      *errorStream << "Partio: Unable to open file \"" << filename << "\"" << std::endl;
       particles->release();
       return NULL;
    }
    
    if (gr.numObjects() == 0)
    {
-      std::cerr << "Partio: No particles object in GTO file \"" << filename << "\"" << std::endl;
+      *errorStream << "Partio: No particles object in GTO file \"" << filename << "\"" << std::endl;
       particles->release();
       return NULL;
    }
    else if (gr.numObjects() != 1)
    {
-      std::cerr << "Partio: More than one particles object in GTO file \"" << filename << "\"" << std::endl;
+      *errorStream << "Partio: More than one particles object in GTO file \"" << filename << "\"" << std::endl;
    }
    
    unsigned int np = 0;
@@ -599,7 +604,7 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly)
             {
                if (!gr.accessProperty(prop))
                {
-                  std::cerr << "Partio: Failed to read \"" << name << "\" property data" << std::endl;
+                  *errorStream << "Partio: Failed to read \"" << name << "\" property data" << std::endl;
                   particles->release();
                   return NULL;
                }
@@ -612,7 +617,7 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly)
    
    if (np == 0)
    {
-      std::cerr << "Partio: No valid particles object in GTO file \"" << filename << "\"" << std::endl;
+      *errorStream << "Partio: No valid particles object in GTO file \"" << filename << "\"" << std::endl;
       particles->release();
       return NULL;
    }
@@ -620,14 +625,19 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly)
    return particles;
 }
 
-bool writeGTO(const char *filename, const ParticlesData &p, const bool compressed)
+bool writeGTO(const char *filename, const ParticlesData &p, const bool compressed, std::ostream* errorStream)
 {
    Gto::Writer *gw = new Gto::Writer();
    
-   if (!gw->open(filename, Gto::Writer::BinaryGTO)) //(compressed ? Gto::Writer::BinaryGTO : Gto::Writer::TextGTO)))
+   if (!errorStream)
+   {
+      errorStream = &std::cerr;
+   }
+
+   if (!gw->open(filename, compressed ? Gto::Writer::CompressedGTO : Gto::Writer::BinaryGTO))
    {
       delete gw;
-      std::cerr << "Partio: Unable to open file \"" << filename << "\"" << std::endl;
+      *errorStream << "Partio: Unable to open file \"" << filename << "\"" << std::endl;
       return false;
    }
    
@@ -649,7 +659,7 @@ bool writeGTO(const char *filename, const ParticlesData &p, const bool compresse
    ParticleAttribute hattr;
    if (!p.attributeInfo("position", hattr))
    {
-      std::cerr <<"Partio: failed to find attr 'position' for GTO output" << std::endl;
+      *errorStream <<"Partio: failed to find attr 'position' for GTO output" << std::endl;
       return false;
    }
    for (int ai=0; ai<na; ++ai)

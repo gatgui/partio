@@ -236,7 +236,7 @@ class ZipStreambufDecompress:public std::streambuf
     GZipFileHeader gzip_header;
     int total_read,total_uncompressed;
     bool part_of_zip_file;
-    bool own_istream;
+    //bool own_istream;
     bool valid;
     bool compressed_data;
 
@@ -313,6 +313,10 @@ public:
     virtual int overflow(int c=EOF)
     {assert(false);return EOF;}
 
+
+    ZipStreambufDecompress();
+    ZipStreambufDecompress(const ZipStreambufDecompress&);
+    ZipStreambufDecompress& operator=(const ZipStreambufDecompress&);
 //#####################################################################
 };
 
@@ -398,6 +402,9 @@ protected:
     if(process(false)==EOF) return EOF;
     return c;}
 
+    ZipStreambufCompress();
+    ZipStreambufCompress(const ZipStreambufCompress&);
+    ZipStreambufCompress& operator=(const ZipStreambufCompress&);
 //#####################################################################
 };
 //#####################################################################

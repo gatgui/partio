@@ -1,7 +1,5 @@
 ===================================================================
 Partio - A library for particle IO and manipulation
-- Andrew Selle, Walt Disney Animation Studios
-- John Cassella, Luma Pictures and redpawFX
 ===================================================================
 
 This is the initial source code release of partio a tool we used for particle
@@ -9,6 +7,19 @@ reading/writing.  It started out as an abstraction for the commonalities in
 particle models (i.e. accessing many attributes associated with an index or
 entity).
 
+Super impatient scons building guide
+====================================
+$ git clone https://github.com/wdas/partio.git
+$ cd partio
+$ scons -j 4
+(dist/ will now have your build)
+
+Getting Started
+==============
+
+I support both scons and cmake build files. I would rather not support
+more. Lately I have been using cmake more, so that may be more up to
+date, but others have contributed fixes from time to time.
 
 Source code overview
 ====================
@@ -24,21 +35,11 @@ src/
              partconv <input format> <output format>
              partinfo <particle file>
              partview <particle file>
-   contrib/
-   	  partio4Maya: 
-   			 partio plugin for maya
-			 containing  3 tools:
-			 	partioVisualizer - an openGL "locator"  for viewing point clouds within the maya interface
-				partioEmitter    - a standard maya emitter type capable of loading  any cache format supported by partio 
-								   and emitting those particles  into a standard maya particle/nParticle object 
-				partioExport	 - a drop in replacement for the maya dynExport command that supports the same syntax but all of partIO's writable formats 
-				(bonus) partioExportGui.mel  a very smart wrapper Gui for exporting particles with user selection of attributes. 
-
 
 Class Model
 -----------
 
-The goal of the library is to abstract the particle itnerface from the data
+The goal of the library is to abstract the particle interface from the data
 representation. That is why Partio represents particles using three classes that
 inherit and provide more functionality
 
@@ -49,7 +50,7 @@ ParticlesDataMutable - Read/write access to all particle data
 The functions used to get particle access are these:
 
 readHeaders() 
-   returns ParticlsInfo
+   returns ParticlesInfo
    reads only the minimum data necessary to get number of particles and
    attributes
 
@@ -76,8 +77,8 @@ VECTOR[3]
 FLOAT[d]
 INT[d]
 
-VECTOR[3] and FLOAT[3] have the same data repesentations.
-VECTOR[4] is invalid howver FLOAT[4] is valid as is FLOAT[1...infinity]
+VECTOR[3] and FLOAT[3] have the same data representations.
+VECTOR[4] is invalid however FLOAT[4] is valid as is FLOAT[1...infinity]
 
 This seems to encompass the most common file formats for particles
 
@@ -113,8 +114,8 @@ Readers/Writers
 
 New readers and writers can be added in the io/ directory. You simply need to
 implement the interface ParticlesInfo, ParticlesData and ParticlesDataMutable
-(or as many as you need). Editing the io/readers.h to add protoypes and
+(or as many as you need). Editing the io/readers.h to add prototypes and
 io/ParticleIO.cpp to add file extension bindings should be easy.
 
 
-
+- Andrew Selle, Walt Disney Animation Studios
