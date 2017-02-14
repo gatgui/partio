@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -36,13 +36,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #define _ParticlesHeaders_h_
 
 #include "../Partio.h"
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
-class ParticleHeaders:public ParticlesDataMutable
+class ParticleHeaders : public ParticlesDataMutable
 {
 public:
     ParticleHeaders();
     void release() const;
+	//ParticlesDataMutable* reset() const;
 protected:
     virtual ~ParticleHeaders();
 
@@ -87,5 +88,7 @@ private:
     std::map<std::string,int> nameToAttribute;
 
 };
-}
+
+EXIT_PARTIO_NAMESPACE
+
 #endif

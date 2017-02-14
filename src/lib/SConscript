@@ -37,7 +37,7 @@ import sys
 Import('env variant_build_abs variant_install_abs GetInstallPath')
 
 libenv = env.Clone(CPPDEFINES=["GTO_STATIC", "GTO_SUPPORT_ZIP"],
-                   CPPPATH=["../../gto/lib"])
+                   CPPPATH=["../../gto/lib", "io/3rdParty/nextLimit"])
 
 zlib_inc = libenv["ZLIB_INC_DIR"]
 if not zlib_inc:
@@ -60,18 +60,24 @@ thisdir = Dir(".").srcnode().abspath
 def cppFiles(basePath, prefix):
     return [prefix + "/" + x for x in os.listdir(basePath + "/" + prefix) if x.endswith(".cpp")]
 
-srcs = cppFiles(thisdir, "core") + cppFiles(thisdir, "io") + cppFiles(thisdir, "../../gto/lib/Gto")
+srcs = cppFiles(thisdir, "core") + \
+       cppFiles(thisdir, "io") + \
+       cppFiles(thisdir, "../../gto/lib/Gto") + \
+       cppFiles(thisdir, "io/3rdParty/nextLimit")
+
 if sys.platform == "win32":
     srcs.append("../../gto/regex/src/regex.c")
 
 lib = libenv.Library("partio", srcs)
 
 libenv.Install(variant_build_abs + "/include", "Partio.h")
+libenv.Install(variant_build_abs + "/include", "PartioConfig.h")
 libenv.Install(variant_build_abs + "/include", "PartioIterator.h")
 libenv.Install(variant_build_abs + "/include", "PartioAttribute.h")
 libenv.Install(variant_build_abs + "/lib", lib)
 
 core_targets = [libenv.Install(variant_install_abs + "/include", "Partio.h"),
+                libenv.Install(variant_install_abs + "/include", "PartioConfig.h"),
                 libenv.Install(variant_install_abs + "/include", "PartioIterator.h"),
                 libenv.Install(variant_install_abs + "/include", "PartioAttribute.h"),
                 libenv.Install(variant_install_abs + "/lib", lib)]

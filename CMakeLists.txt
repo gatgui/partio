@@ -1,5 +1,5 @@
 # PARTIO SOFTWARE
-# Copyright 2010 Disney Enterprises, Inc. All rights reserved
+# Copyright 2013 Disney Enterprises, Inc. All rights reserved
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -45,22 +45,6 @@ SET( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 ## Use verbose make file
 SET ( CMAKE_VERBOSE_MAKEFILE TRUE )
 
-
-## Choose build options
-# Disney specific method of choosing variant
-IF("$ENV{FLAVOR}" STREQUAL "optimize")
-    SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "type of build" FORCE)
-ENDIF("$ENV{FLAVOR}" STREQUAL "optimize")
-IF("$ENV{FLAVOR}" STREQUAL "debug")
-    SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "type of build" FORCE)
-ENDIF("$ENV{FLAVOR}" STREQUAL "debug")
-# Set to release if nothing else defined
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE "Release" CACHE STRING
-      "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
-      FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
-
 ## project name & version
 PROJECT( partio )
 SET( ${PROJECT_NAME}_MAJOR_VERSION 0 )
@@ -77,42 +61,47 @@ IF(WIN32)
 	# these are the defaults included with partio
 	SET( ZLIB_INCLUDE_DIR "${PARTIO_HOME}/winReqLibs/zlib-win_x64/include")
 	SET( ZLIB_LIBRARY_DIR "${PARTIO_HOME}/winReqLibs/zlib-win_x64/lib")
-	SET (ZLIB_LIBRARY "${ZLIB_LIBRARY_DIR}/zlib.lib")
-	SET( GLUT_INCLUDE_DIR "${PARTIO_HOME}/winReqLibs/freeglut-2.8.0-1/include")
-	SET( GLUT_LIBRARY_DIR "${PARTIO_HOME}/winReqLibs/freeglut-2.8.0-1/lib/x64")
+	SET( ZLIB_LIBRARY "${ZLIB_LIBRARY_DIR}/zlib.lib")
+	SET( GLUT_ROOT_PATH "${PARTIO_HOME}/winReqLibs/freeglut-2.8.0-1")
+	SET( GLUT_INCLUDE_PATH "${PARTIO_HOME}/winReqLibs/freeglut-2.8.0-1/include")
+	SET( GLUT_LIBRARY_PATH "${PARTIO_HOME}/winReqLibs/freeglut-2.8.0-1/lib/x64")
 	SET( SWIG_EXECUTABLE "${PARTIO_HOME}/winReqLibs/swigwin-2.0.4/swig.exe")
 	SET( PARTIO_BUILD_PLATFORM "windows_x86_64")
-
+	set(CMAKE_MODULE_PATH ${PARTIO_HOME}/cmake)
 ELSE(WIN32)
 	ADD_DEFINITIONS (-Wextra -Wno-unused-parameter)
 	SET( CMAKE_CXX_FLAGS "-fPIC")
 ENDIF(WIN32)
 
-## Set install location
-IF (UNIX)
-	#EXECUTE_PROCESS(COMMAND sh -c "echo `uname`-`uname -r | cut -d'-' -f1`-`uname -m`" OUTPUT_VARIABLE VARIANT_DIRECTORY OUTPUT_STRIP_TRAILING_WHITESPACE)
-    EXECUTE_PROCESS(COMMAND sh -c "echo `uname`-`uname -m`" OUTPUT_VARIABLE VARIANT_DIRECTORY OUTPUT_STRIP_TRAILING_WHITESPACE)
-	SET(PARTIO_BUILD_PLATFORM "${VARIANT_DIRECTORY}")
-	MESSAGE(STATUS "Build Platform: ${PARTIO_BUILD_PLATFORM}")
+# to switch between rez and local install paths 
+SET (LOCAL_INSTALL 0)
 
+## Set install location
+IF ( ${CMAKE_INSTALL_PREFIX}  STREQUAL  "/usr/local")
+	message(STATUS  "CMAKE INSTALL PREFIX  being changed to local build")
+	SET (LOCAL_INSTALL 1)
+	IF (UNIX)
+		EXECUTE_PROCESS(COMMAND sh -c "echo `uname`-`uname -m`" OUTPUT_VARIABLE VARIANT_DIRECTORY OUTPUT_STRIP_TRAILING_WHITESPACE)
+		SET(PARTIO_BUILD_PLATFORM "${VARIANT_DIRECTORY}")
+		MESSAGE(STATUS "Build Platform: ${PARTIO_BUILD_PLATFORM}")
+	ENDIF(UNIX)
+
+SET(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/build-${PARTIO_BUILD_PLATFORM}/)
 ENDIF()
 
-# output executable and library path
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build-${PARTIO_BUILD_PLATFORM}/bin/${PARTIO_BUILD_PLATFORM})
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build-${PARTIO_BUILD_PLATFORM}/lib/${PARTIO_BUILD_PLATFORM})
-SET(INCLUDE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build-${PARTIO_BUILD_PLATFORM}/include)
-
+message(STATUS  "CMAKE INSTALL PREFIX  = ${CMAKE_INSTALL_PREFIX}")
 
 ## Search for needed  libraries
 find_package(SWIG REQUIRED)
 
 ## Search for useful libraries
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(GLUT REQUIRED)
 IF(GLUT_FOUND)
+	INCLUDE_DIRECTORIES( ${GLUT_INCLUDE_PATH} )
+	LINK_DIRECTORIES (${GLUT_ROOT_PATH}/lib/x64)
 ELSE(GLUT_FOUND)
-	INCLUDE_DIRECTORIES ( ${GLUT_INCLUDE_DIR} )
-	LINK_DIRECTORIES ( ${GLUT_LIBRARY_DIR} )
+	INCLUDE_DIRECTORIES( ${GLUT_INCLUDE_PATH} )
+	LINK_DIRECTORIES ( ${GLUT_LIBRARY_PATH} )
 ENDIF(GLUT_FOUND)
 
 find_package(OpenGL REQUIRED)
@@ -134,20 +123,42 @@ ENDIF(ZLIB_FOUND)
 IF (WIN32)
 	SET( PARTIO_LIBRARIES freeglut zlib partio )
 ELSEIF(APPLE)
-	SET( PARTIO_LIBRARIES ${ZLIB_LIBRARY} partio )
+	SET( PARTIO_LIBRARIES ${GLUT_glut_LIBRARY} ${GLUT_cocoa_LIBRARY} ${ZLIB_LIBRARY} partio )
 ELSEIF (UNIX)
 	SET( PARTIO_LIBRARIES glut z partio )
 ENDIF()
 # make it so partio can be found
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/lib )
 
-## Traverse subdirectories
-ADD_SUBDIRECTORY (src/lib)
-ADD_SUBDIRECTORY (src/tools)
-ADD_SUBDIRECTORY (src/py)
-ADD_SUBDIRECTORY (src/tests)
-ADD_SUBDIRECTORY (src/houdini)
-#ADD_SUBDIRECTORY (src/doc)
-ADD_SUBDIRECTORY (contrib)
+IF (PARTIO_NAMESPACE)
+	ADD_DEFINITIONS(-DPARTIO_NAMESPACE=${PARTIO_NAMESPACE})
+ENDIF ()
 
+SET (LEGACY_BUILD_MODE 1)
 
+IF (BUILD_PARTIO_LIBRARY OR BUILD_PARTIO_MAYA OR BUILD_PARTIO_MTOA OR BUILD_PARTIO_ARNOLD OR BUILD_PARTIO_HOUDINI)
+	SET (LEGACY_BUILD_MODE 0)
+ENDIF()
+
+IF (LEGACY_BUILD_MODE)
+	ADD_SUBDIRECTORY (src/lib)
+	ADD_SUBDIRECTORY (src/tools)
+	ADD_SUBDIRECTORY (src/py)
+	ADD_SUBDIRECTORY (src/tests)
+	#ADD_SUBDIRECTORY (src/houdini)
+	#ADD_SUBDIRECTORY (src/doc)
+	ADD_SUBDIRECTORY (contrib)
+ELSE (LEGACY_BUILD_MODE)
+	IF (BUILD_PARTIO_LIBRARY)
+		ADD_SUBDIRECTORY (src/lib)
+		ADD_SUBDIRECTORY (src/tools)
+		# Temp removal of the python bindings, have to figure out how to change the swig files
+		#ADD_SUBDIRECTORY (src/py)
+		ADD_SUBDIRECTORY (src/tests)
+	ENDIF (BUILD_PARTIO_LIBRARY)
+	#ADD_SUBDIRECTORY (src/houdini)
+	#ADD_DEFINITIONS_SUBDIRECTORY (src/doc)
+	IF (BUILD_PARTIO_MAYA OR BUILD_PARTIO_MTOA OR BUILD_PARTIO_ARNOLD OR BUILD_PARTIO_HOUDINI)
+		ADD_SUBDIRECTORY (contrib)
+	ENDIF()
+ENDIF ()

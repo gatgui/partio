@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright (c) 2011 Disney Enterprises, Inc. and Contributors,  All rights reserved
+Copyright (c) 2013  Disney Enterprises, Inc. and Contributors,  All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -57,7 +57,7 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 #include <memory>
 #include <zlib.h>
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 #define OUT_BUFSIZE		(4096)
 
@@ -418,5 +418,5 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
     return true;
 }
 
-}
+EXIT_PARTIO_NAMESPACE
 

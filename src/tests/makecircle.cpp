@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -41,13 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #include <cmath>
 
-using namespace Partio;
-
 int main(int argc,char *argv[])
 {
-    ParticlesDataMutable* p=create();
-    ParticleAttribute positionAttr=p->addAttribute("position",VECTOR,3);
-    ParticleAttribute normalAttr=p->addAttribute("normal",VECTOR,3);
+    PARTIO::ParticlesDataMutable* p=PARTIO::create();
+    PARTIO::ParticleAttribute positionAttr=p->addAttribute("position",PARTIO::VECTOR,3);
+    PARTIO::ParticleAttribute normalAttr=p->addAttribute("normal",PARTIO::VECTOR,3);
     int n=30;
     for(int i=0;i<n;i++){
         int particle=p->addParticle();

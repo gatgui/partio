@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2011 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -63,8 +63,7 @@ DATA ascii
 
 */
 
-namespace Partio
-{
+ENTER_PARTIO_NAMESPACE
 
 using namespace std;
 
@@ -430,4 +429,4 @@ bool writePCD(const char* filename,const ParticlesData& p,const bool compressed)
 
 }
 
-} // namespace
+EXIT_PARTIO_NAMESPACE

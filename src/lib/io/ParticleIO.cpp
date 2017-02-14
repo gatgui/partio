@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -35,13 +35,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #include <iostream>
 #include <sstream>
+#include "../core/Mutex.h"
 #include "../Partio.h"
 #include "readers.h"
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 using namespace std;
 
 // reader and writer code
+
+PartioMutex initializationMutex;
 
 const map<string,READER_FUNCTION>&
 readers()
@@ -49,22 +52,30 @@ readers()
     static map<string,READER_FUNCTION> data;
     static bool initialized=false;
     if(!initialized){
-        data["bgeo"]=readBGEO;
-        data["geo"]=readGEO;
-        data["pdb"]=readPDB;
-        data["pdb32"]=readPDB32;
-        data["pdb64"]=readPDB64;
-        data["pda"]=readPDA;
-        data["mc"]=readMC;
-        data["ptc"]=readPTC;
-        data["pdc"]=readPDC;
-        data["prt"]=readPRT;
-        data["bin"]=readBIN;
-        data["pts"]=readPTS;
-		data["xyz"]=readXYZ;
-		data["pcd"]=readPCD;
-		data["icecache"]=readICECACHE;
-        data["gto"]=readGTO;
+    initializationMutex.lock();
+        data["bgeo"]		=readBGEO;
+        data["bhclassic"]	=readBGEO;
+        data["geo"]			=readGEO;
+        data["hclassic"]	=readGEO;
+        data["pdb"]			=readPDB;
+        data["pdb32"]		=readPDB32;
+        data["pdb64"]		=readPDB64;
+        data["pda"]			=readPDA;
+        data["mc"]			=readMC;
+        data["ptc"]			=readPTC;
+        data["pdc"]			=readPDC;
+        data["prt"]			=readPRT;
+        data["bin"]			=readBIN;
+        data["pts"]			=readPTS;
+		data["xyz"]			=readXYZ;
+		data["pcd"]			=readPCD;
+        data["ptf"]			=readPTC;
+        data["itbl"]		=readBGEO;
+        data["atbl"]		=readBGEO;
+		data["rpc"]			=readRPC;
+        data["gto"]			=readGTO;
+	initialized=true;
+	initializationMutex.unlock();
     }
     return data;
 }
@@ -75,20 +86,27 @@ writers()
     static map<string,WRITER_FUNCTION> data;
     static bool initialized=false;
     if(!initialized){
-        data["bgeo"]=writeBGEO;
-        data["geo"]=writeGEO;
-        data["pdb"]=writePDB;
-        data["pdb32"]=writePDB32;
-        data["pdb64"]=writePDB64;
-        data["pda"]=writePDA;
-        data["ptc"]=writePTC;
-        data["rib"]=writeRIB;
-        data["pdc"]=writePDC;
-        data["prt"]=writePRT;
-        data["bin"]=writeBIN;
-		data["pcd"]=writePCD;
-		data["icecache"]=writeICECACHE;
-        data["gto"]=writeGTO;
+    initializationMutex.lock();
+        data["bgeo"]		=writeBGEO;
+		data["bhclassic"] 	=writeBGEO;
+        data["geo"]			=writeGEO;
+        data["pdb"]			=writePDB;
+        data["pdb32"]		=writePDB32;
+        data["pdb64"]		=writePDB64;
+        data["pda"]			=writePDA;
+        data["ptc"]			=writePTC;
+        data["rib"]			=writeRIB;
+        data["pdc"]			=writePDC;
+        data["prt"]			=writePRT;
+        data["bin"]			=writeBIN;
+		data["pcd"]			=writePCD;
+        data["ptf"]			=writePTC;
+        data["itbl"]		=writeBGEO;
+        data["atbl"]		=writeBGEO;
+        data["gto"]			=writeGTO;
+		//data["rpc"]		=writeRPC;
+	initialized=true;
+	initializationMutex.unlock();
     }
     return data;
 }
@@ -128,7 +146,7 @@ read(const char* c_filename)
     if(!extensionIgnoringGz(filename,extension,endsWithGz)) return 0;
     map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
-        cerr<<"Partio: No reader defined for extension "<<extension<<endl;
+        cerr<<"Partio READ: No reader defined for extension "<<extension<<endl;
         return 0;
     }
     return (*i->second)(c_filename,false);
@@ -143,7 +161,7 @@ readHeaders(const char* c_filename)
     if(!extensionIgnoringGz(filename,extension,endsWithGz)) return 0;
     map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
-        cerr<<"Partio: No reader defined for extension "<<extension<<endl;
+        cerr<<"Partio READ HEADERS: No reader defined for extension "<<extension<<endl;
         return 0;
     }
     return (*i->second)(c_filename,true);
@@ -164,4 +182,4 @@ write(const char* c_filename,const ParticlesData& particles,const bool forceComp
     (*i->second)(c_filename,particles,forceCompressed || endsWithGz);
 }
 
-} // namespace Partio
+EXIT_PARTIO_NAMESPACE

@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -37,9 +37,7 @@ This code is partially based on the Gifts/readpdb directory of Autodesk Maya
 
 #include "../Partio.h"
 #include "../core/ParticleHeaders.h"
-namespace PDB{
-#include "pdb.h"
-}
+
 #include "PartioEndian.h"
 #include "ZIP.h"
 #include <iostream>
@@ -48,9 +46,12 @@ namespace PDB{
 #include <string>
 #include <cassert>
 #include <memory>
-#include <cstring>
-namespace Partio
-{
+#include <string.h>
+ENTER_PARTIO_NAMESPACE
+
+namespace PDB{
+#include "pdb.h"
+}
 
 using namespace std;
 
@@ -293,4 +294,4 @@ ParticlesDataMutable* readPDB(const char* filename,const bool headersOnly)
 bool writePDB(const char* filename,const ParticlesData& p,const bool compressed)
 {return writePDBHelper<32>(filename,p,compressed);}
 
-}
+EXIT_PARTIO_NAMESPACE

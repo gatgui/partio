@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -47,10 +47,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <cstdio>
 #include <cstring>
 #include <stdint.h>
+#include "PartioConfig.h"
 #include "PartioAttribute.h"
 #include "PartioIterator.h"
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 //! Opaque random access method to a single particle. No number is implied or guaranteed.
 typedef uint64_t ParticleIndex;
@@ -102,6 +103,8 @@ protected:
 public:
 
     typedef ParticleIterator<true> const_iterator;
+
+	//virtual ParticlesData* reset() const = 0;
 
     //! Fill the user supplied values array with data corresponding to the given
     //! list of particles. Specify whether or not your indices are sorted.
@@ -184,6 +187,8 @@ protected:
 public:
 
     typedef ParticleIterator<false> iterator;
+
+	//virtual ParticlesDataMutable* reset() const = 0;
 
     //! Get a pointer to the data corresponding to the given particleIndex and
     //! attribute given by the attribute handle.
@@ -295,5 +300,6 @@ size_t numWriteFormats();
 const char* writeFormatExtension(size_t i);
 size_t writeFormatIndex(const char *ext);
 
-}
+EXIT_PARTIO_NAMESPACE
+
 #endif

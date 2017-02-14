@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <algorithm>
 #include <string>
 #include <cassert>
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 //ParticlesDataMutable::~ParticlesDataMutable()
 //{}
@@ -212,4 +212,4 @@ size_t writeFormatIndex(const char *ext)
     return InvalidIndex;
 }
 
-}
+EXIT_PARTIO_NAMESPACE

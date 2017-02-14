@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -46,9 +46,9 @@ int main(int argc,char *argv[])
         std::cerr<<"Usage is: "<<argv[0]<<" <filename> <attrname> { particle attribute to print info } "<<std::endl;
         return 1;
     }
-    Partio::ParticlesDataMutable* p=Partio::read(argv[1]);
+    PARTIO::ParticlesDataMutable* p=PARTIO::read(argv[1]);
     if(p){
-        Partio::ParticleAttribute attrhandle;
+        PARTIO::ParticleAttribute attrhandle;
         p->attributeInfo(argv[2], attrhandle);
 
         for(int i = 0; i < std::min(10, p->numParticles()); i++){
