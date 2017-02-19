@@ -623,7 +623,7 @@ void handleKeyInfo()
         {
             fov -= 5;
         }
-        keyStates['z'] = false;
+        keyStates[int('z')] = false;
         validKey = true;
     }
     else if (keyStates[int('Z')])
@@ -632,7 +632,7 @@ void handleKeyInfo()
         {
             fov += 5;
         }
-        keyStates['Z'] = false;
+        keyStates[int('Z')] = false;
         validKey = true;
     }
 
