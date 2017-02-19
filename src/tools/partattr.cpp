@@ -51,13 +51,41 @@ int main(int argc,char *argv[])
         PARTIO::ParticleAttribute attrhandle;
         p->attributeInfo(argv[2], attrhandle);
 
-        for(int i = 0; i < std::min(10, p->numParticles()); i++){
-            const float* data = p->data<float>(attrhandle,i);
-            std::cout << argv[2] << i << " ";
-            for(int j = 0; j < attrhandle.count; j++){
-                std::cout << data[j] << " "; 
+        switch (attrhandle.type){
+        case PARTIO::VECTOR:
+        case PARTIO::FLOAT:
+            for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                const float* data = p->data<float>(attrhandle,i);
+                std::cout << argv[2] << i << " ";
+                for(int j = 0; j < attrhandle.count; j++){
+                    std::cout << data[j] << " "; 
+                }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
+            break;
+        case PARTIO::INT:
+            for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                const int* data = p->data<int>(attrhandle,i);
+                std::cout << argv[2] << i << " ";
+                for(int j = 0; j < attrhandle.count; j++){
+                    std::cout << data[j] << " "; 
+                }
+                std::cout << std::endl;
+            }
+            break;
+        case PARTIO::INDEXEDSTR: {
+                const std::vector<std::string>& strs = p->indexedStrs(attrhandle);
+                for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                    const int* data = p->data<int>(attrhandle,i);
+                    std::cout << argv[2] << i << " ";
+                    for(int j = 0; j < attrhandle.count; j++){
+                        std::cout << strs[data[j]] << " "; 
+                    }
+                    std::cout << std::endl;
+                }
+            }
+        default:
+            break;
         }
 
         p->release();
