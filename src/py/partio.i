@@ -69,7 +69,6 @@ struct fixedFloatArray
 import_array();
 #endif
 %}
-#endif
 
 // Particle Types
 enum ParticleAttributeType {NONE=0,VECTOR=1,FLOAT=2,INT=3,INDEXEDSTR=4};
@@ -314,6 +313,7 @@ public:
 
         return PyArray_Return((PyArrayObject *)array);
     }
+#endif
 
 #ifdef PARTIO_USE_NUMPY
     %feature("autodoc");
