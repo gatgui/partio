@@ -348,19 +348,13 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
         dynTime.setValue(frame);
 
-        if (!skipDynamics && objPath.apiType() != MFn::kNParticle)
+        if (!skipDynamics)
         {
             // For some reason nParticles have started to not eval properly using lifespan unless you turn this off. 
             PS.evaluateDynamics(dynTime, firstFrame);
         }
-        else
-        {
-            // NParticles needs to frame advance and update a different way
-            // neither of these work with NParticles+viewport2.0 for some reason
-            MGlobal::viewFrame(dynTime);
-        }
 
-        //MGlobal::viewFrame(dynTime);
+        MGlobal::viewFrame(dynTime);
 
         /// Why is this being done AFTER the evaluate dynamics stuff?
         outFrame = dynTime.value();
@@ -424,7 +418,7 @@ MStatus PartioExport::doIt(const MArgList& Args)
         // wherever we don't have valid data. Using zeroes could potentially
         // create popping artifacts especially if the particle system is
         // used for an instancer.
-        if (particleCount > 0 && numAttributes > 0) // check numAttributes?
+        if (particleCount > 0)
         {
             PARTIO::ParticlesDataMutable* p = PARTIO::createInterleave();
             unsigned int minParticleCount = particleCount;
@@ -688,7 +682,8 @@ MStatus PartioExport::doIt(const MArgList& Args)
 
         // support escaping early  in export command
         if (computation.isInterruptRequested())
-        {   MGlobal::displayWarning("PartioExport detected escape being pressed, ending export early!");
+        {
+            MGlobal::displayWarning("PartioExport detected escape being pressed, ending export early!");
             break;
         }
 
