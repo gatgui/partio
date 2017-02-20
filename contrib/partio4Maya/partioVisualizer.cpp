@@ -427,12 +427,12 @@ MStatus partioVisualizer::initialize()
     addAttribute(time);
 
     attributeAffects(aCacheActive, aUpdateCache);
-    // attributeAffects(aCacheDir, aUpdateCache);
     attributeAffects(aSize, aUpdateCache);
-    // attributeAffects(aCacheFile, aUpdateCache);
-    // attributeAffects(aCacheOffset, aUpdateCache);
-    // attributeAffects(aCacheStatic, aUpdateCache);
-    // attributeAffects(aCacheFormat, aUpdateCache);
+    attributeAffects(aCacheDir, aUpdateCache);
+    attributeAffects(aCacheFile, aUpdateCache);
+    attributeAffects(aCacheOffset, aUpdateCache);
+    attributeAffects(aCacheStatic, aUpdateCache);
+    attributeAffects(aCacheFormat, aUpdateCache);
     attributeAffects(aColorFrom, aUpdateCache);
     attributeAffects(aIncandFrom, aUpdateCache);
     attributeAffects(aAlphaFrom, aUpdateCache);
@@ -446,7 +446,7 @@ MStatus partioVisualizer::initialize()
     attributeAffects(aDrawStyle, aUpdateCache);
     attributeAffects(aForceReload, aUpdateCache);
     // attributeAffects(aByFrame, aUpdateCache);
-    // attributeAffects(time, aUpdateCache);
+    attributeAffects(time, aUpdateCache);
     attributeAffects(aRenderCachePath, aUpdateCache);
 
     attributeAffects(aCacheDir, aRenderCachePath);
@@ -485,6 +485,12 @@ MStatus partioVisualizer::compute(const MPlug& plug, MDataBlock& block)
         float defaultRadius = block.inputValue(aDefaultRadius).asFloat();
         bool forceReload = block.inputValue(aForceReload).asBool();
         MString renderCachePath = block.inputValue(aRenderCachePath).asString();
+        block.inputValue(aCacheDir).asString();
+        block.inputValue(aCacheFile).asString();
+        block.inputValue(aCacheStatic).asBool();
+        block.inputValue(aCacheOffset).asInt();
+        block.inputValue(aCacheFormat).asShort();
+        block.inputValue(time).asTime();
 
         drawError = 0;
 
