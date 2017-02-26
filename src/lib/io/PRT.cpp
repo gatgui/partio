@@ -46,8 +46,9 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 #include "../core/ParticleHeaders.h"
 #include <string.h>
 
+
 //#define USE_ILMHALF    // use Ilm's Half library
-#define AUTO_CASES       // auto upcase i.e.: position => Position
+//#define AUTO_CASES    // auto upcase ie:position => Position
 
 #ifdef USE_ILMHALF
 #include <half.h>
@@ -59,23 +60,23 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 #include <memory>
 #include <zlib.h>
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
-#define OUT_BUFSIZE		(4096)
+#define OUT_BUFSIZE     (4096)
 
-typedef struct FileHeadder {
-    unsigned char	magic[8];
-    unsigned int	headersize;
-    unsigned char	signature[32];
-    unsigned int	version;
+typedef struct FileHeader {
+    unsigned char magic[8];
+    unsigned int  headersize;
+    unsigned char signature[32];
+    unsigned int  version;
     unsigned long long numParticles;
 } PRT_File_Headder;
 
 typedef struct Channel {
-    unsigned char	name[32];
-    unsigned int	type;
-    unsigned int	arity;
-    unsigned int	offset;
+    unsigned char name[32];
+    unsigned int  type;
+    unsigned int  arity;
+    unsigned int  offset;
 } Channel;
 
 static unsigned char magic[8] = {192, 'P', 'R', 'T', '\r', '\n', 26, '\n'};
@@ -137,7 +138,7 @@ static bool write_buffer(std::ostream& os, z_stream& z, char* out_buf, void* p, 
             if(errorStream) *errorStream<<"Zlib error "<<z.msg<<std::endl;;
             return false;
         }
-        int	generated_output=(int)(z.next_out-(Bytef*)out_buf);
+        int generated_output=(int)(z.next_out-(Bytef*)out_buf);
         os.write((char*)out_buf,generated_output);
         if (ret==Z_STREAM_END) break;
     }
@@ -159,8 +160,8 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
     if (headersOnly) simple=new ParticleHeaders;
     else simple=create();
 
-    FileHeadder header;
-    input->read((char*)&header,sizeof(FileHeadder));
+    FileHeader header;
+    input->read((char*)&header,sizeof(FileHeader));
 
     if (memcmp(header.magic, magic, sizeof(magic))) {
         if(errorStream) *errorStream<<"Partio: failed to get PRT magic"<<std::endl;
@@ -174,9 +175,9 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
     int reserve=0;
     int channels=0;
     int channelsize=0;
-    read<LITEND>(*input,reserve);		// reserved
-    read<LITEND>(*input,channels);		// number of channel
-    read<LITEND>(*input,channelsize);	// size of channel
+    read<LITEND>(*input,reserve);      // reserved
+    read<LITEND>(*input,channels);     // number of channel
+    read<LITEND>(*input,channelsize);  // size of channel
 
     simple->addParticles((const int)header.numParticles);
 
@@ -190,25 +191,25 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
         input->read((char*)&ch, sizeof(Channel));
         ParticleAttributeType type=NONE;
         switch (ch.type) {
-        case 0:	// int16
-        case 1:	// int32
-        case 2:	// int64
+        case 0:   // int16
+        case 1:   // int32
+        case 2:   // int64
             type = INT;
             break;
-        case 3:	// float16
-        case 4:	// float32
-        case 5:	// float64
+        case 3:   // float16
+        case 4:   // float32
+        case 5:   // float64
             if (ch.arity == 3)
                 type = VECTOR;
             else
                 type = FLOAT;
             break;
-        case 6:	// uint16
-        case 7:	// uint32
-        case 8:	// uint64
+        case 6:   // uint16
+        case 7:   // uint32
+        case 8:   // uint64
             type = INT;
             break;
-        case 9:	// int8
+        case 9:   // int8
         case 10:// uint8
             type = INT;
             break;
@@ -216,7 +217,7 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
         if (type != NONE) {
 #ifdef AUTO_CASES
             if (ch.name[0] >= 'A' && ch.name[0] <= 'Z') {
-                ch.name[0] += 0x20;
+               ch.name[0] += 0x20;
             }
 #endif
             std::string name((char*)ch.name);
@@ -258,42 +259,42 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
                 for (int count=0;count<attrs[attrIndex].count;count++) {
                     int ival = 0;
                     switch (chans[attrIndex].type) {
-                    case 0:	// int16
+                    case 0:   // int16
                         {
                             ival = (int)*reinterpret_cast<short*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(short) ] );
                         }
                         break;
-                    case 1:	// int32
+                    case 1:   // int32
                         {
                             ival = (int)*reinterpret_cast<int*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(int) ] );
                         }
                         break;
-                    case 2:	// int64
+                    case 2:   // int64
                         {
                             ival = (int)*reinterpret_cast<long long*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(long long) ] );
                         }
                         break;
-                    case 6:	// uint16
+                    case 6:   // uint16
                         {
                             ival = (int)*reinterpret_cast<unsigned short*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(unsigned short) ] );
                         }
                         break;
-                    case 7:	// uint32
+                    case 7:   // uint32
                         {
                             ival = (int)*reinterpret_cast<unsigned int*>( &prt_buf[ chans[attrIndex].offset +  + count * sizeof(unsigned int) ] );
                         }
                         break;
-                    case 8:	// uint64
+                    case 8:   // uint64
                         {
                             ival = (int)*reinterpret_cast<unsigned long long*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(unsigned long long) ] );
                         }
                         break;
-                    case 9:	// int8
+                    case 9:   // int8
                         {
                             ival = (int)prt_buf[ chans[attrIndex].offset + count ];
                         }
                         break;
-                    case 10:// uint8
+                    case 10:  // uint8
                         {
                             ival = (int)*reinterpret_cast<unsigned char*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(unsigned char) ] );
                         }
@@ -306,7 +307,7 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
                 for (int count=0;count<attrs[attrIndex].count;count++) {
                     float fval = 0;
                     switch (chans[attrIndex].type) {
-                    case 3:	// float16
+                    case 3:   // float16
                         {
 #ifdef USE_ILMHALF
                             fval = (float)*reinterpret_cast<half*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(half) ] );
@@ -316,12 +317,12 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
 #endif
                         }
                         break;
-                    case 4:	// float32
+                    case 4:   // float32
                         {
                             fval = (float)*reinterpret_cast<float*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(float) ] );
                         }
                         break;
-                    case 5:	// float64
+                    case 5:   // float64
                         {
                             fval = (float)*reinterpret_cast<double*>( &prt_buf[ chans[attrIndex].offset + count * sizeof(double) ] );
                         }
@@ -346,7 +347,7 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
 
 bool writePRT(const char* filename,const ParticlesData& p,const bool /*compressed*/,std::ostream* errorStream)
 {
-	/// Krakatoa pukes on 0 particle files for some reason so don't export at all....
+   /// Krakatoa pukes on 0 particle files for some reason so don't export at all....
     int numParts = p.numParticles();
     if (numParts)
     {
@@ -358,14 +359,14 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
             return false;
         }
 
-        FileHeadder header;
+        FileHeader header;
         memcpy(header.magic, magic, sizeof(magic));
         memcpy(header.signature, signature, sizeof(signature));
         header.headersize = 0x38;
         header.version = 1;
         header.numParticles = p.numParticles();
         int reserve = 4;
-        output->write((char*)&header,sizeof(FileHeadder));
+        output->write((char*)&header,sizeof(FileHeader));
         write<LITEND>(*output, reserve);
         write<LITEND>(*output, (int)p.numAttributes());
             reserve = 0x2c;
@@ -384,7 +385,7 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
             case FLOAT: ch.type=4; ch.arity=attr.count; offset += sizeof(float)*attr.count; break;
             case INT: ch.type=1; ch.arity=attr.count; offset += sizeof(int)*attr.count; break;
             case VECTOR: ch.type=4; ch.arity=attr.count; offset += sizeof(float)*attr.count; break;
-			case INDEXEDSTR:; break;
+         case INDEXEDSTR:; break;
             case NONE:;break;
             }
             if (ch.arity) {
@@ -429,7 +430,7 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
     return true;
 }
 
-}
+EXIT_PARTIO_NAMESPACE
 
 #else // PARTIO_USE_ZLIB
 
@@ -438,21 +439,21 @@ bool writePRT(const char* filename,const ParticlesData& p,const bool /*compresse
 #include <fstream>
 
 
-namespace Partio
+ENTER_PARTIO_NAMESPACE
+
+ParticlesDataMutable* readPRT(const char*, const bool, std::ostream*)
 {
-    ParticlesDataMutable* readPRT(const char*, const bool, std::ostream*)
-    {
-        std::cerr << "PRT not supported." << std::endl;
-        return 0;
-    }
-
-
-    bool writePRT(const char* filename,const ParticlesData& p,const bool /*compressed*/,std::ostream* errorStream)
-    {
-        std::cerr << "PRT not supported." << std::endl;
-        return false;
-    }
+    std::cerr << "PRT not supported." << std::endl;
+    return 0;
 }
+
+bool writePRT(const char* filename,const ParticlesData& p,const bool /*compressed*/,std::ostream* errorStream)
+{
+    std::cerr << "PRT not supported." << std::endl;
+    return false;
+}
+
+EXIT_PARTIO_NAMESPACE
 
 #endif // PARTIO_USE_ZLIB
 

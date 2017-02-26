@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "../Partio.h"
 #include "readers.h"
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 using namespace std;
 
 // reader and writer code
@@ -68,6 +68,7 @@ readers()
         data["ptf"]=readPTC;
         data["itbl"]=readBGEO;
         data["atbl"]=readBGEO;
+        data["rpc"]=readRPC;
         data["gto"]=readGTO;
 	initialized=true;
 	initializationMutex.unlock();
@@ -95,10 +96,12 @@ writers()
         data["pdc"]=writePDC;
         data["prt"]=writePRT;
         data["bin"]=writeBIN;
+        data["pcd"]=writePCD;
         data["ptf"]=writePTC;
         data["itbl"]=writeBGEO;
         data["atbl"]=writeBGEO;
         data["gto"]=writeGTO;
+        //data["rpc"]=writeRPC;
 	initialized=true;
 	initializationMutex.unlock();
     }
@@ -140,7 +143,7 @@ read(const char* c_filename,bool verbose,std::ostream& errorStream)
     if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
     map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
-        errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
+        errorStream<<"Partio READ: No reader defined for extension "<<extension<<endl;
         return 0;
     }
     return (*i->second)(c_filename,false,verbose ? &errorStream : 0);
@@ -155,7 +158,7 @@ readHeaders(const char* c_filename,bool verbose,std::ostream& errorStream)
     if(!extensionIgnoringGz(filename,extension,endsWithGz,errorStream)) return 0;
     map<string,READER_FUNCTION>::const_iterator i=readers().find(extension);
     if(i==readers().end()){
-        errorStream<<"Partio: No reader defined for extension "<<extension<<endl;
+        errorStream<<"Partio READ HEADERS: No reader defined for extension "<<extension<<endl;
         return 0;
     }
     return (*i->second)(c_filename,true,verbose ? &errorStream : 0);
@@ -176,4 +179,4 @@ write(const char* c_filename,const ParticlesData& particles,const bool forceComp
     (*i->second)(c_filename,particles,forceCompressed || endsWithGz,verbose ? &errorStream : 0);
 }
 
-} // namespace Partio
+EXIT_PARTIO_NAMESPACE

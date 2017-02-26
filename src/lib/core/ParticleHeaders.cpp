@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <cassert>
 #include <iostream>
 
-using namespace Partio;
+ENTER_PARTIO_NAMESPACE
 
 ParticleHeaders::
 ParticleHeaders()
@@ -55,6 +55,18 @@ release() const
 {
     delete this;
 }
+
+/*
+ParticlesDataMutable* ParticleHeaders::reset() const
+{
+	//std::cout << "particleHeaders reset" << std::endl;
+	delete this;
+	ParticlesDataMutable * newParticlesData = create();
+	return newParticlesData;
+}
+*/
+
+
 
 int ParticleHeaders::
 numParticles() const
@@ -256,7 +268,6 @@ dataAsFloat(const ParticleAttribute& attribute,const int indexCount,
     assert(false);
 }
 
-
 void ParticleHeaders::
 setIndexedStr(const ParticleAttribute& attribute,int indexedStringToken,const char* str){
     assert(false);
@@ -266,3 +277,5 @@ void ParticleHeaders::
 setFixedIndexedStr(const FixedAttribute& attribute,int indexedStringToken,const char* str){
     assert(false);
 }
+
+EXIT_PARTIO_NAMESPACE

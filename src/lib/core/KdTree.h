@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -40,15 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <ext/numeric>
 #endif
 
-
-#include <string.h>
-#include <vector>
-#include <float.h>
-#include <algorithm>
-#include <cassert>
-
-namespace Partio
-{
+ENTER_PARTIO_NAMESPACE
 
 /* balanced kdtree
    Brent Burley, Mar 2006
@@ -66,6 +58,12 @@ namespace Partio
       determined based on the node's overall subtree size (left+right+1).
       This can be propagated down during traversal.
 */
+
+#include <string.h>
+#include <vector>
+#include <float.h>
+#include <algorithm>
+#include <cassert>
 
 template <int k> class BBox
 {
@@ -444,5 +442,6 @@ void KdTree<k>::findPoints(std::vector<uint64_t>& result, const BBox<k>& bbox,
 	findPoints(result, bbox, n+left+1, right, nextj);
 }
 
-}
+EXIT_PARTIO_NAMESPACE
+
 #endif

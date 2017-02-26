@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright (c) 2011 Disney Enterprises, Inc. and Contributors,  All rights reserved
+Copyright (c) 2013  Disney Enterprises, Inc. and Contributors,  All rights reserved
 
  keypress events  also added the PTS file format  (all need cleanup)
 Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 #include <string>
 #include <memory>
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 using namespace std;
 
@@ -185,4 +185,4 @@ bool writePDC(const char* filename,const ParticlesData& p,const bool compressed,
     return true;
 }
 
-}// end of namespace Partio
+EXIT_PARTIO_NAMESPACE

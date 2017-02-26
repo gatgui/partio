@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -46,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "KdTree.h"
 
 
-using namespace Partio;
+ENTER_PARTIO_NAMESPACE
 
 ParticlesSimpleInterleave::
 ParticlesSimpleInterleave()
@@ -67,6 +67,17 @@ release() const
 {
     freeCached(const_cast<ParticlesSimpleInterleave*>(this));
 }
+
+/*
+ParticlesDataMutable* ParticlesSimpleInterleave::reset() const
+{
+	std::cout << "interleave reset" << std::endl;
+	freeCached(const_cast<ParticlesSimpleInterleave*>(this));
+	ParticlesDataMutable* newParticlesData = create();
+	return newParticlesData;
+}
+*/
+
 
 
 int ParticlesSimpleInterleave::
@@ -464,3 +475,5 @@ void ParticlesSimpleInterleave::setFixedIndexedStr(const FixedAttribute& attribu
     table.strings[indexedStringToken] = str;
     table.stringToIndex[str]=indexedStringToken;
 }
+
+EXIT_PARTIO_NAMESPACE

@@ -7,6 +7,8 @@ import excons.tools.gl as gl
 import excons.tools.glut as glut
 import excons.tools.zlib as zlib
 import excons.tools.python as python
+import excons.tools.glew as glew
+import excons.tools.maya as maya
 
 
 use_zlib = (excons.GetArgument("use-zlib", 1, int) != 0)
@@ -15,6 +17,9 @@ excons.SetArgument("use-zlib", 1 if use_zlib else 0)
 use_seexpr = (excons.GetArgument("use-seexpr", 0, int) != 0)
 excons.SetArgument("use-c++11", 1 if use_seexpr else 0)
 
+build_maya = ("maya" in BUILD_TARGETS)
+if build_maya:
+   maya.SetupMscver()
 
 env = excons.MakeBaseEnv()
 
@@ -63,8 +68,6 @@ Import("RequireGto")
 cmncusts.append(RequireGto(static=True))
 
 partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", glob.glob("src/lib/*.h"))
-
-py_prefix = python.ModulePrefix() + "/" + python.Version()
 
 swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall %s $SOURCE' % swig_opts, suffix='.cpp', src_suffix='.i')
 env.Append(BUILDERS={"SwigGen": swig_builder})
@@ -134,6 +137,7 @@ if not swig:
 if swig:
    env["SWIG"] = swig
    gen = env.SwigGen(["src/py/partio_wrap.cpp", "src/py/partio.py"], "src/py/partio.i")
+   py_prefix = python.ModulePrefix() + "/" + python.Version()
    prjs.append({"name": "_partio",
                 "type": "dynamicmodule",
                 "alias": "python",
@@ -147,6 +151,30 @@ if swig:
                 "staticlibs": ["partio"] + cmnlibs,
                 "custom": cmncusts + [python.SoftRequire],
                 "install": {py_prefix: [gen[1]]}})
+
+# Maya
+if build_maya:
+   maya_prefix = "maya/" + maya.Version(nice=True)
+   # Use regex from gto on windows
+   mayadefs = cmndefs
+   mayaincdirs = cmnincdirs
+   if sys.platform == "win32":
+      mayadefs.append("REGEX_STATIC")
+      mayaincdirs.append("gto/regex/src")
+   prjs.append({"name": "partio4Maya",
+                "type": "dynamicmodule",
+                "alias": "maya",
+                "ext": maya.PluginExt(),
+                "prefix": maya_prefix + "/plug-ins",
+                "defs": mayadefs,
+                "incdirs": mayaincdirs,
+                "srcs": glob.glob("contrib/partio4Maya/*.cpp"),
+                "libdirs": cmnlibdirs,
+                "staticlibs": ["partio"] + cmnlibs,
+                "custom": [maya.Require, glew.Require] + cmncusts,
+                "install": {maya_prefix + "/icons": glob.glob("contrib/partio4Maya/icons/*"),
+                            maya_prefix + "/scripts": glob.glob("contrib/partio4Maya/scripts/*")}})
+
 # Tests
 tests = filter(lambda x: x.endswith("_main.cpp"), glob.glob("src/tests/*.cpp"))
 for test in tests:

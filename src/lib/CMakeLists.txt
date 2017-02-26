@@ -1,23 +1,23 @@
 # PARTIO SOFTWARE
-# Copyright 2010 Disney Enterprises, Inc. All rights reserved
-# 
+# Copyright 2013 Disney Enterprises, Inc. All rights reserved
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
-# 
+#
 # * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright
 # notice, this list of conditions and the following disclaimer in
 # the documentation and/or other materials provided with the
 # distribution.
-# 
+#
 # * The names "Disney", "Walt Disney Pictures", "Walt Disney Animation
 # Studios" or the names of its contributors may NOT be used to
 # endorse or promote products derived from this software without
 # specific prior written permission from Walt Disney Pictures.
-# 
+#
 # Disclaimer: THIS SOFTWARE IS PROVIDED BY WALT DISNEY PICTURES AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
 # BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -31,9 +31,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-FILE(GLOB io_cpp "io/*.cpp")
+FILE(GLOB io_cpp "io/*.cpp" )
+FILE(GLOB 3rdParty_io_cpp "io/3rdParty/*/*.cpp" )
 FILE(GLOB core_cpp "core/*.cpp")
-ADD_LIBRARY (partio SHARED ${io_cpp} ${core_cpp})
+ADD_LIBRARY (partio SHARED ${3rdParty_io_cpp} ${io_cpp} ${core_cpp})
 SET_TARGET_PROPERTIES(partio PROPERTIES OUTPUT_NAME partio)
 IF(ZLIB_FOUND)
 target_link_libraries(partio ${ZLIB_LIBRARY})
@@ -49,5 +50,16 @@ target_link_libraries(partioSe ${PARTIO_LIBRARIES} ${SEEXPR_LIBS})
 INSTALL (TARGETS partioSe DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ENDIF(SEEXPR_BASE)
 
-FILE(GLOB public_includes "*.h")
-INSTALL (FILES ${public_includes} DESTINATION include)
+IF (${LOCAL_INSTALL})
+INSTALL(TARGETS partio
+		LIBRARY DESTINATION lib/${PARTIO_BUILD_PLATFORM}
+		ARCHIVE DESTINATION lib/${PARTIO_BUILD_PLATFORM})
+ELSE(${LOCAL_INSTALL})
+INSTALL(TARGETS partio
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib)
+ENDIF(${LOCAL_INSTALL})
+
+
+INSTALL(FILES ${public_includes}
+        DESTINATION include)

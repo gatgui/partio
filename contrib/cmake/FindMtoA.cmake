@@ -6,41 +6,59 @@
 #
 # MTOA_FOUND            set if MtoA is found.
 # MTOA_INCLUDE_DIR      MtoA's include directory
-# MtoA_mtoa_api_LIBRARY Full path location of libmtoa_api
+# MTOA_mtoa_api_LIBRARY Full path location of libmtoa_api
 
-FIND_PACKAGE ( PackageHandleStandardArgs )
+find_package(PackageHandleStandardArgs)
 
 ##
 ## Obtain MtoA install location
 ##
-FIND_PATH( MTOA_LOCATION include/render/AOV.h
-  "$ENV{MTOA_ROOT}"
-  NO_DEFAULT_PATH
-  NO_SYSTEM_ENVIRONMENT_PATH
-)
+find_path(MTOA_LOCATION include/render/AOV.h
+    HINTS ENV MTOA_ROOT
+    NO_DEFAULT_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH)
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS ( MtoA
-  REQUIRED_VARS MTOA_LOCATION
-  )
+if(NOT MTOA_LOCATION)
+    # mtd file lives with the plugin and has consistent cross-platform extension
+    find_path(_plugin_path mtoa.mtd
+        HINTS ENV MAYA_PLUG_IN_PATH
+        NO_DEFAULT_PATH
+        NO_SYSTEM_ENVIRONMENT_PATH)
+    if(_plugin_path)
+        get_filename_component(MTOA_LOCATION ${_plugin_path} PATH)
+    endif()
+endif()
 
-IF (MTOA_FOUND)
+if(NOT MTOA_LOCATION)
+    # mtd file lives with the plugin and has consistent cross-platform extension
+    find_path(_plugin_path mtoa_shaders.mtd
+        HINTS ENV ARNOLD_PLUGIN_PATH
+        NO_DEFAULT_PATH
+        NO_SYSTEM_ENVIRONMENT_PATH)
+    if(_plugin_path)
+        get_filename_component(MTOA_LOCATION ${_plugin_path} PATH)
+    endif()
+endif()
 
-  SET ( ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  IF (WIN32)
-  ELSEIF (APPLE)
-	SET( MTOA_LIBRARY_DIR "${MTOA_LOCATION}/bin" CACHE_STRING "MtoA library path" )
-    FIND_LIBRARY ( MtoA_mtoa_api_LIBRARY  mtoa_api  ${MTOA_LIBRARY_DIR} )
-  ELSE (WIN32)
-	# Unices
-	SET( MTOA_LIBRARY_DIR "${MTOA_LOCATION}/bin" CACHE_STRING "MtoA library path" )
-    FIND_LIBRARY ( MtoA_mtoa_api_LIBRARY  mtoa_api  ${MTOA_LIBRARY_DIR} )
-  ENDIF (WIN32)
-  SET(CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES})
+find_package_handle_standard_args(MtoA
+    REQUIRED_VARS MTOA_LOCATION)
 
-  SET( MTOA_INCLUDE_DIR "${MTOA_LOCATION}/include" CACHE STRING "MtoA include path")
-
-MESSAGE(STATUS "MTOA location: ${MTOA_LOCATION}")
-MESSAGE(STATUS "MTOA LIB dir:  ${MtoA_mtoa_api_LIBRARY}")
-MESSAGE(STATUS "MTOA INCLUDE:  ${MTOA_INCLUDE_DIR}")
-
-ENDIF (MTOA_FOUND)
+if(MTOA_FOUND)
+    set(ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    if(WIN32)
+    elseif(APPLE)
+        set(MTOA_LIBRARY_DIR "${MTOA_LOCATION}/bin"
+            CACHE STRING "MtoA library path")
+        find_library(MTOA_mtoa_api_LIBRARY mtoa_api ${MTOA_LIBRARY_DIR})
+    else() # Linux
+        set(MTOA_LIBRARY_DIR "${MTOA_LOCATION}/bin"
+            CACHE STRING "MtoA library path")
+        find_library(MTOA_mtoa_api_LIBRARY  mtoa_api  ${MTOA_LIBRARY_DIR})
+    endif()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(MTOA_INCLUDE_DIR "${MTOA_LOCATION}/include"
+        CACHE STRING "MtoA include path")
+        message(STATUS "MTOA location: ${MTOA_LOCATION}")
+		message(STATUS "MTOA LIB:      ${MTOA_mtoa_api_LIBRARY}")
+		message(STATUS "MTOA INCLUDE:  ${MTOA_INCLUDE_DIR}")
+endif()

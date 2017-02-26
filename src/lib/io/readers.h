@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2011 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -35,10 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #ifndef _READERS_h_
 #define _READERS_h_
 
-#include <map>
-#include <string>
-
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 typedef ParticlesDataMutable* (*READER_FUNCTION)(const char*,const bool,std::ostream*);
 typedef bool (*WRITER_FUNCTION)(const char*,const ParticlesData&,const bool,std::ostream*);
@@ -61,6 +58,9 @@ ParticlesDataMutable* readPDC(	const char* filename,const bool headersOnly,std::
 ParticlesDataMutable* readPRT(	const char* filename,const bool headersOnly,std::ostream* errorStream);
 ParticlesDataMutable* readBIN(	const char* filename,const bool headersOnly,std::ostream* errorStream);
 ParticlesDataMutable* readPTS(  const char* filename,const bool headersOnly,std::ostream* errorStream);
+ParticlesDataMutable* readXYZ( const char* filename,const bool headersOnly,std::ostream* errorStream);
+ParticlesDataMutable* readPCD( const char* filename,const bool headersOnly,std::ostream* errorStream);
+ParticlesDataMutable* readRPC( const char* filename,const bool headersOnly,std::ostream* errorStream);
 ParticlesDataMutable* readGTO( const char* filename,const bool headersOnly,std::ostream* errorStream);
 
 bool writeBGEO(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
@@ -74,7 +74,10 @@ bool writeRIB(const char* filename,const ParticlesData& p,const bool compressed,
 bool writePDC(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
 bool writePRT(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
 bool writeBIN(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
+bool writePCD(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
+//bool writeRPC      (const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
 bool writeGTO(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream);
-}
+
+EXIT_PARTIO_NAMESPACE
 
 #endif

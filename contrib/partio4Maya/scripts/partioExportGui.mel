@@ -44,7 +44,8 @@ global proc partioExportGui()
     if (`window  -exists  partioExportGui`)
         deleteUI partioExportGui ;
 
-    window  -s true -title "partioExportGui" -w 520 -h 600 -iconName "partioExportGui" partioExportGui;
+    //window  -s true -title "partioExportGui" -w 520 -h 600 -iconName "partioExportGui" partioExportGui;
+    window  -s true -title "partioExportGui" -iconName "partioExportGui" partioExportGui;
 
     ////////////////////////////////////////////
     ///// Main layout is a TabLayout
@@ -54,34 +55,36 @@ global proc partioExportGui()
 
     float $start =  `playbackOptions -query -minTime`;
     float $end =  `playbackOptions -query -maxTime`;
-    string $form = `formLayout -w 520 -h 600`;
+    //string $form = `formLayout -w 520 -h 600`;
     //string $tabLayout =`tabLayout  mainTabLayout`;  // when we add the manage cache stuff back in we can re-enable this
-    string $mainLayout = `formLayout -w 530 Create_Cache `;
+    string $mainLayout = `formLayout -numberOfDivisions 100`;
 
-    string $aboutLogoButton = `iconTextButton -style "iconOnly"    -image1 "partioExportGuiLogo.png"`;
-    string $refreshButton = `iconTextButton -style "iconOnly"  -image1 "partioExportRefresh.png"`;
+    string $aboutLogoButton = `iconTextButton -style "iconOnly" -image1 "partioExportGuiLogo.png"`;
+    string $refreshButton = `iconTextButton -style "iconOnly" -image1 "partioExportRefresh.png"`;
 
-    string $closeButton = `button  -w 75 -h 35 -ebg true -bgc .25 0 0 -l "Close" -c "deleteUI partioExportGui"`;
-    string $dynExportButton = `button -w 200 -h 35 -ebg true -bgc 0 .25  0 -l "partioExport" `;
+    string $closeButton = `button -w 75 -h 35 -ebg true -bgc .25 0 0 -l "Close" -c "deleteUI partioExportGui"`;
+    string $dynExportButton = `button -w 200 -h 35 -ebg true -bgc 0 .25  0 -l "Export" `;
 
-    string $partioExportFormatOptionMenu = `optionMenuGrp -l "PartioFormat" partioExportFormat`;
+    string $partioExportFormatOptionMenu = `optionMenuGrp -l "Format" partioExportFormat`;
     string $fmt, $fmts[] = `partioExport -query -format`;
-    int $default = 0, $ifmt = 0;
+    int $dfmt = 0, $ifmt = 0;
     for ($fmt in $fmts)
     {
-        if ($fmt == "PDC")
+        if ($fmt == "pdc")
         {
-            $default = $ifmt;
+            $dfmt = $ifmt;
         }
         menuItem -label `toupper $fmt`;
         $ifmt++;
     }
 
-    optionMenuGrp -e -sl 11 $partioExportFormatOptionMenu;
+    optionMenuGrp -e -sl ($dfmt + 1) $partioExportFormatOptionMenu;
 
-    string $startFrame = `floatFieldGrp -l "StartFrame" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v $start  0 0 0 `;
-    string $endFrame   = `floatFieldGrp -l "EndFrame" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v $end 0 0 0 `;
-    string $frameStep  = `floatFieldGrp -l "Step" -cw 1 90 -cw 2 80 -nf 1 -pre 3 -v 1.0 0 0 0`;
+    string $exportPerFrameCheckbox = `checkBoxGrp -numberOfCheckBoxes 1  -label1 "Per/Frame"  -v1  1`;
+
+    string $startFrame = `floatFieldGrp -l "Start Frame" -adjustableColumn 1 -nf 1 -pre 3 -v $start 0 0 0 `;
+    string $endFrame   = `floatFieldGrp -l "End Frame" -adjustableColumn 1 -nf 1 -pre 3 -v $end 0 0 0 `;
+    string $frameStep  = `floatFieldGrp -l "Frame Step" -adjustableColumn 1 -nf 1 -pre 3 -v 1.0 0 0 0`;
 
     /////////////////////////////
     // cache directory
@@ -92,52 +95,78 @@ global proc partioExportGui()
         $cachePathFromOptionVar = `optionVar -q "partioExportGUICachePath"`;
     }
 
-    string $cacheDir = `textFieldButtonGrp -l "Cache Directory" -text $cachePathFromOptionVar -buttonLabel "....." -cw 1 85  -cw 2 400`;
+    string $cacheDir = `textFieldButtonGrp -l "Cache Directory" -text $cachePathFromOptionVar -buttonLabel "..." -adjustableColumn 2`;
 
-    string $scroll  = `scrollLayout -w 520 -h 350 -hst 0 -vst 10 -cr 1 particleScrollList`;
+    string $scroll  = `scrollLayout -hst 0 -vst 10 -cr 1 particleScrollList`;
 
-    buildParticleScrollList();
+    buildParticleScrollList($scroll);
 
     // edit functions to buttons
-    button -e -c ("dynExportSelectedparticles "+$startFrame+" "+$endFrame+" "+$frameStep+" "+$partioExportFormatOptionMenu+" "+$cacheDir) $dynExportButton;
-    textFieldButtonGrp -e -bc ("updatePath "+$cacheDir) $cacheDir;
+    button -e -c ("dynExportSelectedparticles "+$startFrame+" "+$endFrame+" "+$frameStep+" "+$partioExportFormatOptionMenu+" "+$cacheDir+" "+$exportPerFrameCheckbox) $dynExportButton;
+    textFieldButtonGrp -e -bc ("updatePath "+$cacheDir+" "+1) $cacheDir;
+    textFieldButtonGrp -e -cc ("updatePath "+$cacheDir+" "+0) $cacheDir;
     iconTextButton -e -c "buildParticleScrollList" $refreshButton;
 
-    formLayout  -edit
+    formLayout -edit
+        -attachForm $aboutLogoButton "top" 5
+        -attachForm $aboutLogoButton "left" 5
 
-    -attachForm $aboutLogoButton "top" 5
-    -attachForm $aboutLogoButton "left" 5
-    -attachControl  $scroll "top" 5 $cacheDir
-    -attachForm $scroll "left" 5
-    -attachForm $closeButton "bottom" 5
-    -attachForm $closeButton "right" 5
-    -attachForm $dynExportButton "left" 5
-    -attachForm $dynExportButton "bottom" 5
-    -attachControl$partioExportFormatOptionMenu "left" -40 $dynExportButton
-    -attachForm$partioExportFormatOptionMenu "bottom" 10
-    -attachControl $startFrame  "left" 10 $aboutLogoButton
-    -attachControl $endFrame "left"10 $aboutLogoButton
-    -attachControl $frameStep "left" 10 $aboutLogoButton
-    -attachControl $refreshButton "left" 10 $endFrame
-    -attachForm $refreshButton "top" 28
-    -attachForm $startFrame "top" 30
-    -attachControl $endFrame "top" 5 $startFrame
-    -attachControl $frameStep "top" 5 $endFrame
-    -attachControl $cacheDir "top" 5 $aboutLogoButton 
-    -attachForm $cacheDir "left"10
+        -attachNone $refreshButton "top"
+        -attachNone $refreshButton "left"
+        -attachForm $refreshButton "right" 5
+        -attachControl $refreshButton "bottom" 5 $cacheDir
 
-    $mainLayout;
+        -attachNone $startFrame "top"
+        -attachControl $startFrame "left" 5 $aboutLogoButton
+        -attachControl $startFrame "bottom" 5 $endFrame
+        -attachControl $startFrame "right" 5 $refreshButton
+
+        -attachNone $endFrame "top"
+        -attachControl $endFrame "left" 5 $aboutLogoButton
+        -attachControl $endFrame "bottom" 5 $frameStep
+        -attachControl $endFrame "right" 5 $refreshButton
+
+        -attachNone $frameStep "top"
+        -attachControl $frameStep "left" 5 $aboutLogoButton
+        -attachControl $frameStep "right" 5 $refreshButton
+        -attachControl $frameStep "bottom" 5 $cacheDir
+
+        -attachControl $cacheDir "top" 5 $aboutLogoButton 
+        -attachForm $cacheDir "left" 5
+        -attachForm $cacheDir "right" 5
+        -attachNone $cacheDir "bottom"
+
+        -attachControl $scroll "top" 5 $cacheDir
+        -attachForm $scroll "left" 5
+        -attachForm $scroll "right" 5
+        -attachControl $scroll "bottom" 5 $dynExportButton
+        
+        -attachNone $dynExportButton "top"
+        -attachNone $dynExportButton "right"
+        -attachForm $dynExportButton "left" 5
+        -attachForm $dynExportButton "bottom" 5
+
+        -attachNone $partioExportFormatOptionMenu "top"
+        -attachNone $partioExportFormatOptionMenu "right"
+        -attachControl $partioExportFormatOptionMenu "left" -40 $dynExportButton
+        -attachForm $partioExportFormatOptionMenu "bottom" 5
+
+        -attachNone $exportPerFrameCheckbox "top"
+        -attachControl $exportPerFrameCheckbox "left" 5 $partioExportFormatOptionMenu
+        -attachNone $exportPerFrameCheckbox "right"
+        -attachForm $exportPerFrameCheckbox "bottom" 5
+
+        -attachNone $closeButton "top"
+        -attachNone $closeButton "left"
+        -attachForm $closeButton "bottom" 5
+        -attachForm $closeButton "right" 5
+        
+        $mainLayout;
 
     showWindow partioExportGui;
-
-    // this shakes the window to force it to come up at the desired size every time.
-    window -edit  -w 501 -h 401 partioExportGui;
-    window -edit  -w 520 -h 500 partioExportGui;
-
-
 }
 
-global proc buildParticleScrollList()
+global proc buildParticleScrollList(string $scroll)
 {
 
     if (`columnLayout -q -exists "particleColumnLayout"`)
@@ -145,7 +174,7 @@ global proc buildParticleScrollList()
         deleteUI particleColumnLayout;
     }
 
-    setParent particleScrollList;
+    setParent $scroll;
     string $columnMain = `columnLayout particleColumnLayout`;
 
     string $particles[] = `ls -type particle`;
@@ -211,8 +240,7 @@ global proc buildParticleEntry(string $particle, string $parent, int $color)
         setParent $parent;
     }
 
-    frameLayout -p $parent  -ebg true -bgc $uiColor $uiColor $uiColor -label $particle -collapsable true  -collapse $open -w 492 -borderStyle "etchedIn"
-    -labelAlign "center" $framelayoutName;
+    frameLayout -p $parent  -ebg true -bgc $uiColor $uiColor $uiColor -label $particle -collapsable true  -collapse $open -w 492 -labelAlign "center" $framelayoutName;
 
     rowColumnLayout -ebg true -bgc $uiColor $uiColor $uiColor -nc 4 -cw 1 120 -cw 2 120 -cw 3 120 -cw 4 120   $columnLayoutName;
 
@@ -224,15 +252,29 @@ global proc buildParticleEntry(string $particle, string $parent, int $color)
     // uses a modified  version of listParticleAttrs with a separate list for dynExport
     string $attrs[] = `partioExportGuiListParticleAttrs  $particle "allPP" $ramp $supress `;
 
+	if(!`attributeExists  "partioCheckboxStatus" $particle`)
+	{
+		addAttr -ln "partioCheckboxStatus"  -dt "string"  $particle;
+		setAttr -type "string" ($particle+".partioCheckboxStatus") ("position,velocity");
+	}
+	string $chekBoxStat = `getAttr  ($particle+".partioCheckboxStatus")`;
+	string $checkboxArray[] = stringToStringArray($chekBoxStat, ",");
+
+
     for ($attr in $attrs)
     {
+        int $status = 0;
         if ($attr == "particleId")
         {
         }
         else
         {
             $checkBoxName = ($particle+$attr+"checkBox");
-            checkBox -l $attr -v 0 $checkBoxName;
+            if (`stringArrayContains $attr  $checkboxArray`)
+            {
+                $status = 1;
+            }
+            checkBox -l $attr -v $status -onc ("checkboxStatusChanger "+$particle + " " + $attr + " " + 1) -ofc ("checkboxStatusChanger "+$particle + " " + $attr + " " + 0) $checkBoxName;
         }
     }
 
@@ -240,12 +282,47 @@ global proc buildParticleEntry(string $particle, string $parent, int $color)
     setParent ..;
 }
 
+global proc  checkboxStatusChanger(string $particle, string $attr, int $onOff)
+{
+	print "checkbox changer";
+	if(`attributeExists  "partioCheckboxStatus" $particle`)
+	{
+		string $chekBoxStat = `getAttr  ($particle+".partioCheckboxStatus")`;
+		print $chekBoxStat;
+		string $checkboxArray[] = stringToStringArray($chekBoxStat, ",");
+		if (`stringArrayContains $attr  $checkboxArray`)
+		{
+			if (!$onOff)  // remove from list
+			{
+				string $temp[] ={$attr};
+				$checkboxArray = `stringArrayRemove $temp $checkboxArray`;
+			}
+			else{} // do nothing, highly unlikely, but just to cover all bases
+		}
+		else
+		{
+			// we want to add it to the string
+			stringArrayInsertAtIndex(`size($checkboxArray)`, $checkboxArray, $attr);
+		}
+		setAttr -type "string" ($particle+".partioCheckboxStatus") `stringArrayToString $checkboxArray ","`;
+	}
+	else
+	{
+		addAttr -ln "partioCheckboxStatus"  -dt "string"  $particle;
+		if  ($onOff)
+		{
+			setAttr -type "string" ($particle+".partioCheckboxStatus") ($attr+",");
+		}
+	}
+}
+
 
 global proc dynExportSelectedparticles(string $startFrame,
                                        string $endFrame,
                                        string $frameStep,
                                        string $partioExportOptionMenu,
-                                       string $cacheDirCtrl)
+                                       string $cacheDirCtrl,
+                                       int $perframe)
 {
     global string $gMainProgressBar;  // This is defined on maya startup
 
@@ -260,8 +337,6 @@ global proc dynExportSelectedparticles(string $startFrame,
     float $istep = 0.0;
     string $partioExportFormat = `optionMenuGrp -q -v  $partioExportOptionMenu`;
     string $cacheDir = `textFieldButtonGrp -q -text  $cacheDirCtrl`;
-
-    int $perframe = 0;
 
     if ($step <= 0 || $start >= $end)
     {
@@ -381,12 +456,36 @@ global proc dynExportSelectedparticles(string $startFrame,
 /////////////////////////////////////////////
 //// update  path
 
-global proc  updatePath (string $cacheDirControl)
+global proc  updatePath (string $cacheDirControl, int $button)
 {
-    string $result[] = `fileDialog2 -fileMode 3 `;
+    string $startingDir =`textFieldButtonGrp -q -text $cacheDirControl`;
+    if ($button)
+    {
+        if (!`filetest -d $startingDir`)
+        {
+            string $workspace = `workspace -q -rd`;
+            if (`filetest -d ($workspace+"_output")`)
+            {
+                $startingDir = ($workspace + "/_output/particles");
+            }
+            else
+            {
+                $startingDir = ($workspace + "/particles");
+            }
+        }
 
-    textFieldButtonGrp -e -text $result[0]  $cacheDirControl;
-    optionVar -sv "partioExportGUICachePath" $result[0];
+        string $result[] = `fileDialog2 -dir $startingDir -fileMode 3 `;
+        if (`size $result[0]` > 0) // else the dialog was most likely cancelled and we don't want to update
+        {
+            textFieldButtonGrp -e -text $result[0]  $cacheDirControl;
+            optionVar -sv "partioExportGUICachePath" $result[0];
+        }
+    }
+    else
+    {
+        textFieldButtonGrp -e -text $startingDir  $cacheDirControl;
+        optionVar -sv "partioExportGUICachePath" $startingDir;
+    }
 }
 
 

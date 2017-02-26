@@ -1,5 +1,5 @@
 # PARTIO SOFTWARE
-# Copyright 2010 Disney Enterprises, Inc. All rights reserved
+# Copyright 2013 Disney Enterprises, Inc. All rights reserved
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -35,6 +35,10 @@ link_directories(${CMAKE_BINARY_DIR}/src/lib)
 
 foreach(item testiterator test testcache testclonecopy testcluster teststr makecircle makeline testkdtree)
     ADD_EXECUTABLE(${item} "${item}.cpp")
-    target_link_libraries(${item} ${PARTIO_LIBRARIES})
-    install(TARGETS ${item} DESTINATION share/partio/test)
+    TARGET_LINK_LIBRARIES(${item} ${PARTIO_LIBRARIES})
+	IF (${LOCAL_INSTALL})
+		INSTALL(TARGETS ${item} RUNTIME DESTINATION bin/${PARTIO_BUILD_PLATFORM})
+	ELSE(${LOCAL_INSTALL})
+    	INSTALL(TARGETS ${item} RUNTIME DESTINATION bin)
+	ENDIF(${LOCAL_INSTALL})
 endforeach(item)

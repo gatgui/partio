@@ -1,6 +1,6 @@
 # PARTIO SOFTWARE
-# Copyright 2010 Disney Enterprises, Inc. All rights reserved
-# 
+# Copyright 2013 Disney Enterprises, Inc. All rights reserved
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
@@ -33,6 +33,7 @@
 
 include_directories(
    ${CMAKE_SOURCE_DIR}/src/lib
+   ${GLUT_INCLUDE_PATH}
 )
 
 link_directories(${CMAKE_BINARY_DIR}/src/lib)
@@ -41,7 +42,11 @@ IF(GLUT_FOUND AND OPENGL_FOUND)
     INCLUDE_DIRECTORIES(${GLUT_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
     ADD_EXECUTABLE(partview partview.cpp)
     target_link_libraries(partview ${PARTIO_LIBRARIES} ${GLUT_LIBRARY} ${OPENGL_LIBRARY})
-    install(TARGETS  partview DESTINATION bin)
+	IF (${LOCAL_INSTALL})
+		INSTALL(TARGETS partview RUNTIME DESTINATION bin/${PARTIO_BUILD_PLATFORM})
+	ELSE(${LOCAL_INSTALL})
+		INSTALL(TARGETS partview RUNTIME DESTINATION bin)
+	ENDIF(${LOCAL_INSTALL})
 ENDIF(GLUT_FOUND AND OPENGL_FOUND)
 
 ADD_EXECUTABLE(partinfo partinfo.cpp)
@@ -53,4 +58,10 @@ target_link_libraries(partconv ${PARTIO_LIBRARIES})
 ADD_EXECUTABLE(partattr partattr.cpp)
 target_link_libraries(partattr ${PARTIO_LIBRARIES})
 
-install(TARGETS partattr partconv partinfo DESTINATION bin)
+IF (${LOCAL_INSTALL})
+	INSTALL(TARGETS partattr partconv partinfo RUNTIME DESTINATION bin/${PARTIO_BUILD_PLATFORM})
+ELSE(${LOCAL_INSTALL})
+    INSTALL(TARGETS partattr partconv partinfo RUNTIME DESTINATION bin)
+ENDIF(${LOCAL_INSTALL})
+
+

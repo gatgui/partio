@@ -5,7 +5,23 @@ Import('env variant_build_abs variant_install_abs GetInstallPath')
 
 mayaenv = env.Clone(CPPPATH=[variant_build_abs + "/include"],
                     LIBPATH=[variant_build_abs + "/lib"],
-                    LIBS=["partio", env["ZLIB_LIB_NAME"]])
+                    LIBS=["partio", env["ZLIB_LIB_NAME"], env["GLEW_LIB_NAME"]])
+
+glew_root = mayaenv["GLEW_ROOT"]
+
+glew_inc = mayaenv["GLEW_INC_DIR"]
+if not glew_inc and glew_root:
+    glew_inc += glew_root + "/include"
+
+if glew_inc:
+    mayaenv.Append(CPPPATH=[glew_inc])
+
+glew_lib = mayaenv["GLEW_LIB_DIR"]
+if not glew_lib and glew_root:
+    glew_lib += glew_root + "/lib"
+
+if glew_lib:
+    mayaenv.Append(LIBPATH=[glew_lib])
 
 zlib_root = mayaenv["ZLIB_ROOT"]
 

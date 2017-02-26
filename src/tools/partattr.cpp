@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -46,18 +46,46 @@ int main(int argc,char *argv[])
         std::cerr<<"Usage is: "<<argv[0]<<" <filename> <attrname> { particle attribute to print info } "<<std::endl;
         return 1;
     }
-    Partio::ParticlesDataMutable* p=Partio::read(argv[1]);
+    PARTIO::ParticlesDataMutable* p=PARTIO::read(argv[1]);
     if(p){
-        Partio::ParticleAttribute attrhandle;
+        PARTIO::ParticleAttribute attrhandle;
         p->attributeInfo(argv[2], attrhandle);
 
-        for(int i = 0; i < std::min(10, p->numParticles()); i++){
-            const float* data = p->data<float>(attrhandle,i);
-            std::cout << argv[2] << i << " ";
-            for(int j = 0; j < attrhandle.count; j++){
-                std::cout << data[j] << " "; 
+        switch (attrhandle.type){
+        case PARTIO::VECTOR:
+        case PARTIO::FLOAT:
+            for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                const float* data = p->data<float>(attrhandle,i);
+                std::cout << argv[2] << i << " ";
+                for(int j = 0; j < attrhandle.count; j++){
+                    std::cout << data[j] << " "; 
+                }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
+            break;
+        case PARTIO::INT:
+            for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                const int* data = p->data<int>(attrhandle,i);
+                std::cout << argv[2] << i << " ";
+                for(int j = 0; j < attrhandle.count; j++){
+                    std::cout << data[j] << " "; 
+                }
+                std::cout << std::endl;
+            }
+            break;
+        case PARTIO::INDEXEDSTR: {
+                const std::vector<std::string>& strs = p->indexedStrs(attrhandle);
+                for(int i = 0; i < std::min(10, p->numParticles()); i++){
+                    const int* data = p->data<int>(attrhandle,i);
+                    std::cout << argv[2] << i << " ";
+                    for(int j = 0; j < attrhandle.count; j++){
+                        std::cout << strs[data[j]] << " "; 
+                    }
+                    std::cout << std::endl;
+                }
+            }
+        default:
+            break;
         }
 
         p->release();

@@ -35,11 +35,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #pragma once
 
+#include "PartioConfig.h"
 #include <algorithm>
 #include <iostream>
 #include <cmath>
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 class Vec3
 {
@@ -102,4 +103,4 @@ inline Vec3 operator*(const float a,const Vec3& v)
     return Vec3(a*v.x,a*v.y,a*v.z);
 }
 
-}
+EXIT_PARTIO_NAMESPACE

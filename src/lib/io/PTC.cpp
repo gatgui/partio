@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -50,8 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <memory>
 #include <sstream>
 
-namespace Partio
-{
+ENTER_PARTIO_NAMESPACE
 
 using namespace std;
 
@@ -373,4 +372,4 @@ bool writePTC(const char* filename,const ParticlesData& p,const bool compressed,
     return true;
 }
 
-}
+EXIT_PARTIO_NAMESPACE

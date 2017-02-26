@@ -35,14 +35,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 #ifdef PARTIO_USE_SEEXPR
 
-#include <Partio.h>
+#include "PartioConfig.h"
+#include "Partio.h"
 #include <SeExpr2/Expression.h>
 #include <SeExpr2/VarBlock.h>
 #include <SeExpr2/Vec.h>
 #include <map>
 
-namespace Partio
-{
+ENTER_PARTIO_NAMESPACE
 
 template <class T>
 class AttribVar : public SeExpr2::ExprVarRef
@@ -219,7 +219,7 @@ private:
     void writeOutput();
 };
 
-}
+EXIT_PARTIO_NAMESPACE
 
 #endif
 

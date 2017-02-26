@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -51,22 +51,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <Partio.h>
 #include "Camera.h"
 
-using namespace Partio;
 using namespace std;
 
 
 // global vars
-ParticlesData* particles;
-ParticlesData* connectivity;
-
-
+PARTIO::ParticlesData* particles;
+PARTIO::ParticlesData* connectivity;
 Camera camera;
-ParticleAttribute positionAttr;
-ParticleAttribute colorAttr;
-ParticleAttribute alphaAttr;
+PARTIO::ParticleAttribute positionAttr;
+PARTIO::ParticleAttribute colorAttr;
+PARTIO::ParticleAttribute alphaAttr;
 
-ParticleAttribute attr1;
-ParticleAttribute attr2;
+PARTIO::ParticleAttribute attr1;
+PARTIO::ParticleAttribute attr2;
 
 int numPoints;
 int frameNumberOGL;
@@ -75,8 +72,6 @@ double fov;
 double pointSize;
 double brightness;
 
-bool useColor;
-bool useAlpha;
 bool sourceChanged;
 bool frameForwardPressed;
 bool frameBackwardPressed;
@@ -85,8 +80,12 @@ bool brightnessDownPressed;
 bool* keyStates;
 bool frameMissing;
 bool anyKeyPressed;
-bool colorMissing;
-bool alphaMissing;
+float R;
+float G;
+float B;
+float A;
+int colorFromIndex;
+int alphaFromIndex;
 
 string loadError;
 string particleFile;
@@ -105,8 +104,12 @@ static void processNormalKeys(unsigned char key, int x, int y);
 static void processNormalUpKeys(unsigned char key, int x, int y);
 static void processSpecialKeys(int key, int x, int y);
 static void processSpecialUpKeys(int key, int x, int y);
-void timer();
-
+void handleKeyInfo();
+void timer(int time);
+int buildPopupMenu();
+void colorFromMenu(int idCommand);
+void alphaFromMenu(int idCommand);
+void processMainMenu(int idCommand);
 int main(int argc,char *argv[]);
 
 

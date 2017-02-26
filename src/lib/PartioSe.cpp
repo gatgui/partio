@@ -38,8 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "PartioSe.h"
 #include <cstdlib>
 
-namespace Partio
-{
+ENTER_PARTIO_NAMESPACE
 
 PartioSe::PartioSe(Partio::ParticlesDataMutable *parts,
                    const char *expression,
@@ -374,6 +373,6 @@ SeExpr2::ExprVarRef* PartioSe::resolveVar(const std::string &s) const
     return 0;
 }
 
-} // end namespace Partio
+EXIT_PARTIO_NAMESPACE
 
 #endif

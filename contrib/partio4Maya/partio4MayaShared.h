@@ -1,6 +1,6 @@
 /* partio4Maya  3/12/2012, John Cassella  http://luma-pictures.com and  http://redpawfx.com
 PARTIO Export
-Copyright 2012 (c)  All rights reserved
+Copyright 2013 (c)  All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -69,6 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include <maya/MStringArray.h>
 #include <maya/MTimeArray.h>
 #include <maya/MTime.h>
+#include <maya/MBoundingBox.h>
 
 #include "Partio.h"
 
@@ -95,6 +96,7 @@ public:
     static MString setExt(short extNum,bool write=false);
     static void buildSupportedExtensionList(std::map<short,MString> &formatExtMap,bool write=false);
     static void drawPartioLogo(float multiplier);
+    static MBoundingBox partioLogoBoundingBox();
     static MVector jitterPoint(int id, float freq, float offset, float jitterMag);
     static float noiseAtValue( float x);
     static void initTable( long seed );

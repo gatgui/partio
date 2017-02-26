@@ -1,6 +1,6 @@
 /*
 PARTIO SOFTWARE
-Copyright 2010 Disney Enterprises, Inc. All rights reserved
+Copyright 2013 Disney Enterprises, Inc. All rights reserved
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #include "Mutex.h"
 #include "../Partio.h"
 
-namespace Partio{
+ENTER_PARTIO_NAMESPACE
 
 template<int d> class KdTree;
 
@@ -53,6 +53,8 @@ public:
     using ParticlesData::const_iterator;
 
     void release() const;
+
+	//ParticlesDataMutable* reset() const;
 
     ParticlesSimple();
 
@@ -121,4 +123,4 @@ private:
     KdTree<3>* kdtree;
 };
 
-}
+EXIT_PARTIO_NAMESPACE
