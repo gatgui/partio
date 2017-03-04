@@ -80,6 +80,7 @@ prjs = [
     "incdirs": cmnincdirs,
     "srcs": glob.glob("src/lib/core/*.cpp") +
             glob.glob("src/lib/io/*.cpp") +
+            glob.glob("src/lib/io/3rdParty/nextLimit/*.cpp") +
             glob.glob("src/lib/*.cpp"),
     "custom": cmncusts
    },
@@ -158,20 +159,24 @@ if build_maya:
    # Use regex from gto on windows
    mayadefs = cmndefs
    mayaincdirs = cmnincdirs
+   mayacppflags = ""
    if sys.platform == "win32":
       mayadefs.append("REGEX_STATIC")
       mayaincdirs.append("gto/regex/src")
+   else:
+      mayacppflags += " -Wno-unused-parameter"
    prjs.append({"name": "partio4Maya",
                 "type": "dynamicmodule",
                 "alias": "maya",
                 "ext": maya.PluginExt(),
                 "prefix": maya_prefix + "/plug-ins",
                 "defs": mayadefs,
+                "cppflags": mayacppflags,
                 "incdirs": mayaincdirs,
                 "srcs": glob.glob("contrib/partio4Maya/*.cpp"),
                 "libdirs": cmnlibdirs,
                 "staticlibs": ["partio"] + cmnlibs,
-                "custom": [maya.Require, glew.Require] + cmncusts,
+                "custom": [maya.Require, glew.Require, gl.Require] + cmncusts,
                 "install": {maya_prefix + "/icons": glob.glob("contrib/partio4Maya/icons/*"),
                             maya_prefix + "/scripts": glob.glob("contrib/partio4Maya/scripts/*")}})
 

@@ -133,7 +133,7 @@ static void render()
         glEnable(GL_DEPTH);
         //glDepthMask(0); // turns the particles inside out
 
-        Vec3 bmin(FLT_MAX,FLT_MAX,FLT_MAX),bmax(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+        PARTIO::Vec3 bmin(FLT_MAX,FLT_MAX,FLT_MAX),bmax(-FLT_MAX,-FLT_MAX,-FLT_MAX);
 
         if (!frameMissing)
         {
@@ -152,8 +152,8 @@ static void render()
                     for (int i=0;i<particles->numParticles();i++)
                     {
                         const float* pos=particles->data<float>(positionAttr,i);
-                        bmin=bmin.min(Vec3(pos));
-                        bmax=bmax.max(Vec3(pos));
+                        bmin=bmin.min(PARTIO::Vec3(pos));
+                        bmax=bmax.max(PARTIO::Vec3(pos));
                     }
                     //std::cout<<"count  "<<particles->numParticles()<<std::endl;
                     //std::cout<<"boxmin "<<bmin<<std::endl;
@@ -539,11 +539,11 @@ void  reloadParticleFile(int direction)
 		if (result >=0)
 		{
 			particles=0;
-			particles=read(particleFile.c_str());
+			particles=PARTIO::read(particleFile.c_str());
                         int result2 = stat(connectivityFile.c_str(),&statinfo);
                         if(result2>=0){
                             // std::cerr<<"reading connectivity "<<connectivityFile<<std::endl;
-                            connectivity=read(connectivityFile.c_str());
+                            connectivity=PARTIO::read(connectivityFile.c_str());
                             if(connectivity){
                                 connectivity->attributeInfo("p1",attr1);
                                 connectivity->attributeInfo("p2",attr2);
@@ -582,8 +582,7 @@ void  reloadParticleFile(int direction)
 /// main TIMER loop function
 /// TODO: this function needs to be more responsive to keyboard input.... with larger caches it will  act like the key press is stuck down
 
-
-
+/*
 void timer(int time)
 {
 
@@ -669,6 +668,7 @@ void timer(int time)
         }
     }
 }
+*/
 
 
 ///////////////////////////////////////////

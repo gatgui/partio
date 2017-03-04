@@ -64,6 +64,8 @@ struct fixedFloatArray
     };
 };
 
+%}
+
 %init %{
 #ifdef PARTIO_USE_NUMPY
 import_array();
@@ -564,11 +566,11 @@ ParticlesDataMutable* computeClustering(ParticlesDataMutable* particles,const in
 #ifdef PARTIO_USE_SEEXPR
 class PartioSe{
   public:
-    PartioSe(ParticlesDataMutable* parts,const char* expr);
-    PartioSe(ParticlesDataMutable* partsPairing,ParticlesDataMutable* parts,const char* expr);
+    PartioSe(ParticlesDataMutable* parts, const char* expr, const char* attrSuffix="", const char* fixedAttrPrefix="c_");
     bool runAll();
     bool runRandom();
     bool runRange(int istart,int iend);
     void setTime(float val);
+    bool bindOutput(const char* partAttrName);
 };
 #endif

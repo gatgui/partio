@@ -70,7 +70,7 @@ typedef struct FileHeader {
     unsigned char signature[32];
     unsigned int  version;
     unsigned long long numParticles;
-} PRT_File_Headder;
+} PRT_File_Header;
 
 typedef struct Channel {
     unsigned char name[32];
@@ -169,7 +169,7 @@ ParticlesDataMutable* readPRT(const char* filename,const bool headersOnly,std::o
     }
     
     // The header may be a different size in other PRT versions
-    if (header.headersize > sizeof(FileHeadder))
+    if (header.headersize > sizeof(FileHeader))
         input->seekg(header.headersize);
     
     int reserve=0;

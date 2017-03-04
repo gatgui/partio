@@ -69,12 +69,14 @@ using namespace std;
 
 // TODO: convert this to use iterators like the rest of the readers/writers
 
-ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
+ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly,std::ostream* errorStream)
 {
+   std::ostream &err = (errorStream ? *errorStream : cerr);
+
 	//cout <<  "readPCD" << endl;
     auto_ptr<istream> input(Gzip_In(filename,ios::in|ios::binary));
     if(!*input){
-        cerr<<"Partio: Can't open particle data file: "<<filename<<endl;
+        err <<"Partio: Can't open particle data file: "<<filename<<endl;
         return 0;
     }
 
@@ -106,7 +108,7 @@ ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
         *input>>word;
         if(word!="FIELDS")
 		{
-			cout << "no FIELDS" << endl;
+			err << "no FIELDS" << endl;
 			simple->release();return 0;
 		}
     }
@@ -137,7 +139,7 @@ ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
 		else if (word == "8") attrSizes.push_back(8);
 		else
 		{
-			cout << "missing TYPE" << endl;
+			err << "missing TYPE" << endl;
 			simple->release();return 0;
 		}
     }
@@ -296,7 +298,7 @@ ParticlesDataMutable* readPCD(const char* filename,const bool headersOnly)
     return simple;
 }
 
-bool writePCD(const char* filename,const ParticlesData& p,const bool compressed)
+bool writePCD(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* /*errorStream*/)
 {
 	//cout << "write PCD" << endl;
 	bool comp = false ;
