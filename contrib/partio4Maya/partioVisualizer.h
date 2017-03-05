@@ -99,6 +99,7 @@ class partioVizReaderCache
 {
 public:
     partioVizReaderCache();
+    ~partioVizReaderCache();
 	void clear();
     MBoundingBox bbox;
     PARTIO::ParticlesDataMutable* particles;

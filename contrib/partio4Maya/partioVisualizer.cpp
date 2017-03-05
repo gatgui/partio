@@ -166,6 +166,11 @@ partioVizReaderCache::partioVizReaderCache() :
     clear();
 }
 
+partioVizReaderCache::~partioVizReaderCache()
+{
+    clear();
+}
+
 void partioVizReaderCache::clear()
 {
     if (particles != 0)
@@ -175,6 +180,7 @@ void partioVizReaderCache::clear()
         // so it will free the pointer accordingly
         particles = 0;
     }
+
     bbox.clear();
     positionAttr.attributeIndex = -1;
     colorAttr.attributeIndex = -1;
@@ -186,6 +192,7 @@ void partioVizReaderCache::clear()
     // clear is not guaranteed to free up memory!
     std::vector<float>().swap(rgba);
     std::vector<float>().swap(radius);
+    std::vector<float>().swap(normal);
 }
 
 /// CREATOR
@@ -213,8 +220,6 @@ partioVisualizer::partioVisualizer()
 /// DESTRUCTOR
 partioVisualizer::~partioVisualizer()
 {
-    if (pvCache.particles)
-        pvCache.particles->release();
     MSceneMessage::removeCallback(partioVisualizerOpenCallback);
     MSceneMessage::removeCallback(partioVisualizerImportCallback);
     MSceneMessage::removeCallback(partioVisualizerReferenceCallback);
