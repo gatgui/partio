@@ -46,76 +46,154 @@ namespace
 }
 
 // cached read write
-std::map<ParticlesData*,int> cachedParticlesCount;
-std::map<std::string,ParticlesData*> cachedParticles;
+std::map<ParticlesData*, int> cachedParticlesCount;
+std::map<std::string, ParticlesData*> cachedParticles;
 
-ParticlesData* readCached(const char* filename,const bool sort,const bool verbose,std::ostream& error)
+ParticlesData* readCached(const char* filename, const bool sort, const bool verbose, std::ostream &error)
 {
-    mutex.lock();
-    std::map<std::string,ParticlesData*>::iterator i=cachedParticles.find(filename);
+    if (!filename)
+    {
+        return 0;
+    }
 
     ParticlesData* p=0;
-    if(i!=cachedParticles.end()){
-        p=i->second;
-        cachedParticlesCount[p]++;
-    }else{
-        ParticlesDataMutable* p_rw=read(filename,verbose);
-        if(p_rw){
-            if(sort) p_rw->sort();
-            p=p_rw;
-            cachedParticles[filename]=p;
-            cachedParticlesCount[p]=1;
+
+    std::string key = filename;
+    // Normalize path before querying cache
+#ifdef _WIN32
+    for (std::string::iterator ci=key.begin(); ci!=key.end(); ++ci)
+    {
+        char c = *ci;
+        if (c == '\\')
+        {
+            *ci = '/';
+        }
+        else if ('A' <= c && c <= 'Z')
+        {
+            *ci = 'a' + (c - 'A');
         }
     }
+#else
+    // Actually, on OSX too, the file system is by default case insensitive...
+#endif
+
+    mutex.lock();
+
+    std::map<std::string,ParticlesData*>::iterator i = cachedParticles.find(key);
+
+    if (i != cachedParticles.end())
+    {
+        p = i->second;
+        cachedParticlesCount[p]++;
+    }
+    else
+    {
+        ParticlesDataMutable* p_rw = read(key.c_str(), verbose, error);
+        if (p_rw)
+        {
+            if (sort)
+            {
+                p_rw->sort();
+            }
+            p = p_rw;
+            cachedParticles[key] = p;
+            cachedParticlesCount[p] = 1;
+        }
+    }
+
     mutex.unlock();
+
     return p;
 }
 
 void freeCached(ParticlesData* particles)
 {
-	if(!particles) return;
+    if (!particles)
+    {
+        return;
+    }
 
-	mutex.lock();
+    mutex.lock();
 
-    std::map<ParticlesData*,int>::iterator i=cachedParticlesCount.find(particles);
-    if(i==cachedParticlesCount.end())
-	{ // Not found in cache, just free
+    std::map<ParticlesData*, int>::iterator i = cachedParticlesCount.find(particles);
+
+    if (i == cachedParticlesCount.end())
+    {
+        // Not found in cache, just free
         delete (ParticlesInfo*)particles;
-
     }
     else
-	{
+    {
+        // found in cache
 
-		// found in cache
-        i->second--; // decrement ref count
-        if(i->second==0)
-		{ 	// ref count is now zero, remove from structure
-			delete (ParticlesInfo*)particles;
+        // decrement ref count
+        i->second--;
+
+        if (i->second <= 0)
+        {
+            // ref count is now zero, remove from structure
+            delete (ParticlesInfo*)particles;
+
             cachedParticlesCount.erase(i);
-            for(std::map<std::string,ParticlesData*>::iterator i2=cachedParticles.begin(); i2!=cachedParticles.end(); ++i2)
-			{
-				if(i2->second==particles)
-				{
-					cachedParticles.erase(i2);
-                    goto exit_and_release;
+
+            for (std::map<std::string, ParticlesData*>::iterator i2 = cachedParticles.begin();
+                 i2 != cachedParticles.end(); ++i2)
+            {
+                if (i2->second == particles)
+                {
+                    cachedParticles.erase(i2);
+                    break;
                 }
             }
-            assert(false);
         }
     }
-  exit_and_release:
 
     mutex.unlock();
 }
 
 void beginCachedAccess(ParticlesData* particles)
 {
-    // TODO: for future use
+    if (!particles)
+    {
+        return;
+    }
+
+    mutex.lock();
+
+    std::map<ParticlesData*, int>::iterator i = cachedParticlesCount.find(particles);
+    if (i != cachedParticlesCount.end())
+    {
+        i->second++;
+    }
+
+    mutex.unlock();
 }
 
 void endCachedAccess(ParticlesData* particles)
 {
-    // TODO: for future use
+    if (!particles)
+    {
+        return;
+    }
+
+    mutex.lock();
+
+    std::map<ParticlesData*, int>::iterator i = cachedParticlesCount.find(particles);
+    if (i != cachedParticlesCount.end())
+    {
+        if (i->second - 1 <= 0)
+        {
+            mutex.unlock();
+            freeCached(particles);
+            return;
+        }
+        else
+        {
+            i->second--;
+        }
+    }
+
+    mutex.unlock();
 }
 
 EXIT_PARTIO_NAMESPACE
