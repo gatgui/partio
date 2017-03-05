@@ -11,11 +11,14 @@ import excons.tools.glew as glew
 import excons.tools.maya as maya
 
 
-use_zlib = (excons.GetArgument("use-zlib", 1, int) != 0)
-excons.SetArgument("use-zlib", 1 if use_zlib else 0)
+use_zlib = (excons.GetArgument("partio-use-zlib", 1, int) != 0)
+use_seexpr = (excons.GetArgument("partio-use-seexpr", 0, int) != 0)
 
-use_seexpr = (excons.GetArgument("use-seexpr", 0, int) != 0)
+# Don't use zlib in GTO, doesn't seem very stable
+excons.SetArgument("gto-use-zlib", 0)
+# SeExpr support requires C++11
 excons.SetArgument("use-c++11", 1 if use_seexpr else 0)
+
 
 build_maya = ("maya" in BUILD_TARGETS)
 if build_maya:
@@ -60,14 +63,8 @@ if use_seexpr:
       cmncusts.append(dl.Require)
 
 
-excons.ignore_help = True
-# don't use zlib in GTO, doesn't seem very stable
-ARGUMENTS["use-zlib"] = "0"
-SConscript("gto/SConstruct")
+excons.Call("gto")
 Import("RequireGto")
-ARGUMENTS["use-zlib"] = "1"
-excons.ignore_help = False
-
 
 cmncusts.append(RequireGto(static=True))
 
@@ -215,8 +212,8 @@ for test in ["makecircle", "makeline", "testcluster", "testse"]:
                 "custom": cmncusts})
 
 build_opts = """PARTIO OPTIONS
-  use-zlib=0|1   : Enable zlib compression.                 [1]
-  use-seexpr=0|1 : Enable particle expression using SeExpr. [0]"""
+  partio-use-zlib=0|1   : Enable zlib compression.                 [1]
+  partio-use-seexpr=0|1 : Enable particle expression using SeExpr. [0]"""
 excons.AddHelpOptions(partio=build_opts)
 
 tgts = excons.DeclareTargets(env, prjs)
