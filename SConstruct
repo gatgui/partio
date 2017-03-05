@@ -61,10 +61,14 @@ if use_seexpr:
 
 
 excons.ignore_help = True
+# don't use zlib in GTO, doesn't seem very stable
+ARGUMENTS["use-zlib"] = "0"
 SConscript("gto/SConstruct")
+Import("RequireGto")
+ARGUMENTS["use-zlib"] = "1"
 excons.ignore_help = False
 
-Import("RequireGto")
+
 cmncusts.append(RequireGto(static=True))
 
 partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", glob.glob("src/lib/*.h"))
@@ -80,7 +84,8 @@ prjs = [
     "incdirs": cmnincdirs,
     "srcs": glob.glob("src/lib/core/*.cpp") +
             glob.glob("src/lib/io/*.cpp") +
-            glob.glob("src/lib/io/3rdParty/nextLimit/*.cpp") +
+            # RPC requires zlib
+            (glob.glob("src/lib/io/3rdParty/nextLimit/*.cpp") if use_zlib else []) +
             glob.glob("src/lib/*.cpp"),
     "custom": cmncusts
    },

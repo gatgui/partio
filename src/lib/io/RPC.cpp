@@ -39,6 +39,9 @@ Some code for this format  was helped along  by referring to the official nextli
 #include "../Partio.h"
 #include "../core/ParticleHeaders.h"
 #include "PartioEndian.h"
+
+#ifdef PARTIO_USE_ZLIB
+
 #include "ZIP.h"
 #include "3rdParty/nextLimit/RPCReader.h"
 
@@ -287,5 +290,31 @@ bool writeRPC(const char* filename,const ParticlesData& p, const bool /*compress
 {
 	return true;
 }
+
+#else // PARTIO_USE_ZLIB
+
+ENTER_PARTIO_NAMESPACE
+
+ParticlesDataMutable* readRPC(const char* filename, const bool /*headersOnly*/, std::ostream* errorStream)
+{
+	if (!errorStream)
+	{
+		errorStream = &std::cerr;
+	}
+	*errorStream << "Partio: encountered .rpc file '" << filename << "' but partio not compiled with zlib" << std::endl;
+	return NULL;
+}
+
+bool writeRPC(const char* filename,const ParticlesData& /*p*/, const bool /*compressed*/, std::ostream* errorStream)
+{
+	if (!errorStream)
+	{
+		errorStream = &std::cerr;
+	}
+	*errorStream << "Partio: .rpc file write requested for '" << filename << "' but partio not compiled with zlib" << std::endl;
+	return false;
+}
+
+#endif // PARTIO_USE_ZLIB
 
 EXIT_PARTIO_NAMESPACE
