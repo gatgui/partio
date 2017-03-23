@@ -426,33 +426,33 @@ MStatus PartioCache::readChannelName(MString &name)
          Partio::ParticleAttribute pattr;
          if (mRData->attributeInfo(mRAttrIdx, mRAttr))
          {
-            // skip particle id
-            if (mRAttr.name == "id" || mRAttr.name == "particleId")
-            {
-#ifdef _DEBUG
-               MGlobal::displayInfo(MString("  Skip ") + mRAttr.name.c_str());
-#endif
-               ++mRAttrIdx;
-               if (mRAttrIdx < N)
-               {
-                  if (!mRData->attributeInfo(mRAttrIdx, mRAttr))
-                  {
-                     return MStatus::kFailure;
-                  }
-               }
-               else if (mRAttrIdx == N)
-               {
-                  name = "count";
-#ifdef _DEBUG
-                  MGlobal::displayInfo("  " + name);
-#endif
-                  return MStatus::kSuccess;
-               }
-               else
-               {
-                  return MStatus::kFailure;
-               }
-            }
+//             // skip particle id
+//             if (mRAttr.name == "id" || mRAttr.name == "particleId")
+//             {
+// #ifdef _DEBUG
+//                MGlobal::displayInfo(MString("  Skip ") + mRAttr.name.c_str());
+// #endif
+//                ++mRAttrIdx;
+//                if (mRAttrIdx < N)
+//                {
+//                   if (!mRData->attributeInfo(mRAttrIdx, mRAttr))
+//                   {
+//                      return MStatus::kFailure;
+//                   }
+//                }
+//                else if (mRAttrIdx == N)
+//                {
+//                   name = "count";
+// #ifdef _DEBUG
+//                   MGlobal::displayInfo("  " + name);
+// #endif
+//                   return MStatus::kSuccess;
+//                }
+//                else
+//                {
+//                   return MStatus::kFailure;
+//                }
+//             }
             name = mRAttr.name.c_str();
 #ifdef _DEBUG
             MGlobal::displayInfo("  " + name);
@@ -855,13 +855,13 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
       {
          // name should be prefixed by "<shapename>_" ?
          MString name = pattr.name.c_str();
-         if (name == "id" || name == "particleId")
-         {
-#ifdef _DEBUG
-            MGlobal::displayInfo("  Skip channel: " + name);
-#endif
-            continue;
-         }
+//          if (name == "id" || name == "particleId")
+//          {
+// #ifdef _DEBUG
+//             MGlobal::displayInfo("  Skip channel: " + name);
+// #endif
+//             continue;
+//          }
 #ifdef _DEBUG
          MGlobal::displayInfo("  Found channel: " + name);
 #endif
