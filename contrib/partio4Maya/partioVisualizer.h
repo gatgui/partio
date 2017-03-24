@@ -89,6 +89,10 @@ class partioVizReaderCache
 {
 public:
     partioVizReaderCache();
+    ~partioVizReaderCache();
+
+    void clear();
+
     int token;
     MBoundingBox bbox;
     int dList;

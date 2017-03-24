@@ -83,15 +83,40 @@ MObject partioVisualizer::aForceReload;
 MObject partioVisualizer::aRenderCachePath;
 
 
-partioVizReaderCache::partioVizReaderCache():
-        token(0),
-        bbox(MBoundingBox(MPoint(0,0,0,0),MPoint(0,0,0,0))),
-        dList(0),
-        particles(NULL),
-        rgb(NULL),
-        rgba(NULL),
-        flipPos(NULL)
+partioVizReaderCache::partioVizReaderCache()
+    : token(0)
+    , bbox(MBoundingBox(MPoint(0,0,0,0), MPoint(0,0,0,0)))
+    , dList(0)
+    , particles(NULL)
+    , rgb(NULL)
+    , rgba(NULL)
+    , flipPos(NULL)
 {
+    flipPos = (float *) malloc(sizeof(float));
+    rgb = (float *) malloc (sizeof(float));
+    rgba = (float *) malloc(sizeof(float));
+}
+
+partioVizReaderCache::~partioVizReaderCache()
+{
+    clear();
+
+    if (flipPos) free(flipPos);
+    if (rgb) free(rgb);
+    if (rgba) free(rgba);
+}
+
+void partioVizReaderCache::clear()
+{
+    if (particles)
+    {
+        particles->release();
+        particles = NULL;
+    }
+
+    bbox.clear();
+
+    radius.clear();
 }
 
 /// CREATOR
@@ -114,28 +139,13 @@ partioVisualizer::partioVisualizer()
       drawError(false),
       mLastOffset(0)
 {
-    pvCache.particles = NULL;
-    pvCache.flipPos = (float *) malloc(sizeof(float));
-    pvCache.rgb = (float *) malloc (sizeof(float));
-    pvCache.rgba = (float *) malloc(sizeof(float));
-    pvCache.radius = MFloatArray();
 }
 /// DESTRUCTOR
 partioVisualizer::~partioVisualizer()
 {
-
-    if (pvCache.particles)
-    {
-        pvCache.particles->release();
-    }
-    free(pvCache.flipPos);
-    free(pvCache.rgb);
-    free(pvCache.rgba);
-    pvCache.radius.clear();
     MSceneMessage::removeCallback( partioVisualizerOpenCallback);
     MSceneMessage::removeCallback( partioVisualizerImportCallback);
     MSceneMessage::removeCallback( partioVisualizerReferenceCallback);
-
 }
 
 void* partioVisualizer::creator()
@@ -412,6 +422,7 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
 
         t = MTime(t.value() + cacheOffset, MTime::uiUnit());
 
+        float deltaTime = 0.0f;
         MString frameString;
         MString formatExt;
         MString newCacheFile = "";
@@ -459,9 +470,10 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         {
             newCacheFile = cacheDir + "/" + cacheFile;
         }
-        else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_EXACT, t, it))
+        else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, t, it))
         {
             newCacheFile = it->second;
+            deltaTime = float(t.value() - it->first.value());
         }
 
         if (renderCachePath != renderCacheFile)
@@ -494,16 +506,14 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
 
         if (!partio4Maya::cacheExists(newCacheFile.asChar()))
         {
-            pvCache.particles = 0; // resets the particles
-            pvCache.bbox.clear();
+            pvCache.clear();
         }
 
         //  after updating all the file path stuff,  exit here if we don't want to actually load any new data
         if (!cacheActive)
         {
+            pvCache.clear();
             forceReload = true;
-            pvCache.particles = 0; // resets the particles
-            pvCache.bbox.clear();
             mLastFileLoaded = "";
             return MS::kSuccess;
         }
@@ -514,8 +524,9 @@ MStatus partioVisualizer::compute( const MPlug& plug, MDataBlock& block )
         {
             cacheChanged = true;
             mFlipped = false;
+            
+            pvCache.clear();
             //MGlobal::displayWarning(MString("PartioVisualizer->Loading: " + newCacheFile));
-            pvCache.particles = 0; // resets the particles
 
             pvCache.particles = read(newCacheFile.asChar());
 
