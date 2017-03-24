@@ -91,6 +91,10 @@ class partioInstReaderCache
 {
 public:
     partioInstReaderCache();
+    ~partioInstReaderCache();
+
+    void clear();
+
     int token;
     MBoundingBox bbox;
     int dList;
@@ -114,8 +118,6 @@ public:
     float* flipPos;
     MFnArrayAttrsData instanceData;
     MObject instanceDataObj;
-
-
 };
 
 

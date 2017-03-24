@@ -435,12 +435,12 @@ MStatus PartioImport::doIt(const MArgList& Args)
             {
                 positionAttrName = "Position";
                 validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
-                if (!validPosition)
-                {
-                    positionAttrName = "worldPosition";
-                    validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
-                    worldPosition = true;
-                }
+            }
+            if (!validPosition)
+            {
+                positionAttrName = "worldPosition";
+                validPosition = particles->attributeInfo(positionAttrName.asChar(), positionAttr);
+                worldPosition = true;
             }
         }
         if (!validPosition)
@@ -462,13 +462,18 @@ MStatus PartioImport::doIt(const MArgList& Args)
             validId = particles->attributeInfo(idAttrName.asChar(), idAttr);
             if (!validId)
             {
-                idAttrName = "Id";
+                idAttrName = "ID";
                 validId = particles->attributeInfo(idAttrName.asChar(), idAttr);
-                if (!validId)
-                {
-                    idAttrName = "particleId";
-                    validId = particles->attributeInfo(idAttrName.asChar(), idAttr);
-                }
+            }
+            if (!validId)
+            {
+                idAttrName = "particleId";
+                validId = particles->attributeInfo(idAttrName.asChar(), idAttr);
+            }
+            if (!validId)
+            {
+                idAttrName = "ParticleId";
+                validId = particles->attributeInfo(idAttrName.asChar(), idAttr);
             }
             if (validId)
             {
@@ -510,28 +515,38 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 worldVelocity = false;
                 velocityAttrName = "velocity";
                 validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
-                if (!validVelocity)
-                {
-                    velocityAttrName = "Velocity";
-                    validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
-                    if (!validVelocity)
-                    {
-                        velocityAttrName = "vel";
-                        validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
-                        if (!validVelocity)
-                        {
-                            velocityAttrName = "Vel";
-                            validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
-                            if (!validVelocity && dontEmit)
-                            {
-                                // When not emitting, look for world velocities last
-                                velocityAttrName = "worldVelocity";
-                                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
-                                worldVelocity = true;
-                            }
-                        }
-                    }
-                }
+            }
+            if (!validVelocity)
+            {
+                velocityAttrName = "Velocity";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            }
+            if (!validVelocity)
+            {
+                velocityAttrName = "vel";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            }
+            if (!validVelocity)
+            {
+                velocityAttrName = "Vel";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            }
+            if (!validVelocity)
+            {
+                velocityAttrName = "v";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            }
+            if (!validVelocity)
+            {
+                velocityAttrName = "V";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+            }
+            if (!validVelocity && dontEmit)
+            {
+                // When not emitting, look for world velocities last
+                velocityAttrName = "worldVelocity";
+                validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
+                worldVelocity = true;
             }
             if (validVelocity)
             {
@@ -591,12 +606,13 @@ MStatus PartioImport::doIt(const MArgList& Args)
                     // At this point, we have already looked up position and velocity synonyms
                     if (attrName == positionAttrName ||
                         attrName == velocityAttrName ||
-                        attrName == idAttrName || 
+                        attrName == idAttrName ||
                         attrName == "position" ||
                         attrName == "velocity" ||
                         attrName == "worldPosition" ||
                         attrName == "worldVelocity" ||
-                        attrName == "particleId")
+                        attrName == "particleId" ||
+                        attrName == "id")
                     {
                         continue;
                     }

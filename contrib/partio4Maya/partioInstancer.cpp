@@ -120,15 +120,73 @@ MObject partioInstancer::aInstanceData;
 
 
 
-partioInstReaderCache::partioInstReaderCache():
-        token(0),
-        bbox(MBoundingBox(MPoint(0,0,0,0),MPoint(0,0,0,0))),
-        dList(0),
-        particles(NULL),
-        flipPos(NULL)
+partioInstReaderCache::partioInstReaderCache()
+    : token(0)
+    , bbox(MBoundingBox(MPoint(0,0,0,0),MPoint(0,0,0,0)))
+    , dList(0)
+    , particles(NULL)
+    , flipPos(NULL)
 {
+    MStatus stat;
+
+    instanceDataObj = instanceData.create(&stat);
+    CHECK_MSTATUS(stat);
+
+    flipPos = (float*) malloc(sizeof(float));
+
+    clear();
 }
 
+partioInstReaderCache::~partioInstReaderCache()
+{
+    clear();
+
+    free(flipPos);
+}
+
+void partioInstReaderCache::clear()
+{
+    if (particles)
+    {
+        particles->release();
+        particles = NULL;
+    }
+
+    positionAttr.type = Partio::NONE;
+    positionAttr.attributeIndex = -1;
+    idAttr.type = Partio::NONE;
+    idAttr.attributeIndex = -1;
+    velocityAttr.type = Partio::NONE;
+    velocityAttr.attributeIndex = -1;
+    rotationAttr.type = Partio::NONE;
+    rotationAttr.attributeIndex = -1;
+    aimDirAttr.type = Partio::NONE;
+    aimDirAttr.attributeIndex = -1;
+    aimPosAttr.type = Partio::NONE;
+    aimPosAttr.attributeIndex = -1;
+    aimAxisAttr.type = Partio::NONE;
+    aimAxisAttr.attributeIndex = -1;
+    aimUpAttr.type = Partio::NONE;
+    aimUpAttr.attributeIndex = -1;
+    aimWorldUpAttr.type = Partio::NONE;
+    aimWorldUpAttr.attributeIndex = -1;
+    lastRotationAttr.type = Partio::NONE;
+    lastRotationAttr.attributeIndex = -1;
+    scaleAttr.type = Partio::NONE;
+    scaleAttr.attributeIndex = -1;
+    lastScaleAttr.type = Partio::NONE;
+    lastScaleAttr.attributeIndex = -1;
+    lastAimDirAttr.type = Partio::NONE;
+    lastAimDirAttr.attributeIndex = -1;
+    lastAimPosAttr.type = Partio::NONE;
+    lastAimPosAttr.attributeIndex = -1;
+    indexAttr.type = Partio::NONE;
+    indexAttr.attributeIndex = -1;
+
+    bbox.clear();
+
+    instanceData.clear();
+}
 
 /// Constructor
 partioInstancer::partioInstancer()
@@ -157,29 +215,14 @@ partioInstancer::partioInstancer()
       mLastStatic(false),
       mLastOffset(0)
 {
-    pvCache.particles = NULL;
-    pvCache.flipPos = (float *) malloc(sizeof(float));
-
-    // create the instanceData object
-    MStatus stat;
-    pvCache.instanceDataObj = pvCache.instanceData.create ( &stat );
-    CHECK_MSTATUS(stat);
-
 }
+
 /// DESTRUCTOR
 partioInstancer::~partioInstancer()
 {
-
-    if (pvCache.particles)
-    {
-        pvCache.particles->release();
-    }
-    free(pvCache.flipPos);
-
     MSceneMessage::removeCallback( partioInstancerOpenCallback );
     MSceneMessage::removeCallback( partioInstancerImportCallback );
     MSceneMessage::removeCallback( partioInstancerReferenceCallback );
-
 }
 
 void* partioInstancer::creator()
@@ -609,9 +652,7 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
 
         if (!partio4Maya::cacheExists(newCacheFile.asChar()))
         {
-            pvCache.particles=0; // resets the particles
-            pvCache.bbox.clear();
-            pvCache.instanceData.clear();
+            pvCache.clear();
             mLastFileLoaded = "";
         }
 
@@ -620,41 +661,31 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             cacheChanged = true;
             mFlipped = false;
             MGlobal::displayWarning(MString("PartioInstancer->Loading: " + newCacheFile));
-            pvCache.particles=0; // resets the particles
+            
+            pvCache.clear();
 
-            pvCache.particles=read(newCacheFile.asChar());
+            pvCache.particles = read(newCacheFile.asChar());
 
             mLastFileLoaded = newCacheFile;
-            if (pvCache.particles->numParticles() == 0)
-            {
-                pvCache.instanceData.clear();
-                return (MS::kSuccess);
-            }
 
-            char partCount[50];
-            sprintf (partCount, "%d", pvCache.particles->numParticles());
-            //MGlobal::displayInfo(MString ("PartioInstancer-> LOADED: ") + partCount + MString (" particles"));
             block.outputValue(aForceReload).setBool(false);
             block.setClean(aForceReload);
-
-            pvCache.instanceData.clear();
-
         }
 
-        if (pvCache.particles)
+        if (pvCache.particles && cacheChanged)
         {
 
-			if (!pvCache.particles->attributeInfo("id",pvCache.idAttr) &&
-                !pvCache.particles->attributeInfo("ID",pvCache.idAttr) &&
-                !pvCache.particles->attributeInfo("particleId",pvCache.idAttr) &&
-                !pvCache.particles->attributeInfo("ParticleId",pvCache.idAttr))
+			if (!pvCache.particles->attributeInfo("id", pvCache.idAttr) &&
+                !pvCache.particles->attributeInfo("ID", pvCache.idAttr) &&
+                !pvCache.particles->attributeInfo("particleId", pvCache.idAttr) &&
+                !pvCache.particles->attributeInfo("ParticleId", pvCache.idAttr))
             {
                 MGlobal::displayError("PartioInstancer->Failed to find id attribute ");
                 return ( MS::kFailure );
             }
 
-            if (!pvCache.particles->attributeInfo("position",pvCache.positionAttr) &&
-                !pvCache.particles->attributeInfo("Position",pvCache.positionAttr))
+            if (!pvCache.particles->attributeInfo("position", pvCache.positionAttr) &&
+                !pvCache.particles->attributeInfo("Position", pvCache.positionAttr))
             {
                 MGlobal::displayError("PartioInstancer->Failed to find position attribute ");
                 return ( MS::kFailure );
@@ -676,9 +707,12 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             canMotionBlur = false;
             if (computeMotionBlur)
             {
-                if ((pvCache.particles->attributeInfo("velocity",pvCache.velocityAttr) ||
-                     pvCache.particles->attributeInfo("Velocity",pvCache.velocityAttr))||
-                     pvCache.particles->attributeInfo("V"		,pvCache.velocityAttr))
+                if (pvCache.particles->attributeInfo("velocity", pvCache.velocityAttr) ||
+                    pvCache.particles->attributeInfo("Velocity", pvCache.velocityAttr) ||
+                    pvCache.particles->attributeInfo("vel", pvCache.velocityAttr) ||
+                    pvCache.particles->attributeInfo("Vel", pvCache.velocityAttr) ||
+                    pvCache.particles->attributeInfo("v", pvCache.velocityAttr) ||
+                    pvCache.particles->attributeInfo("V", pvCache.velocityAttr))
                 {
                     canMotionBlur = true;
                 }
@@ -687,9 +721,6 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
                     MGlobal::displayWarning("PartioInstancer->Failed to find velocity attribute motion blur will be impaired ");
                 }
             }
-
-            pvCache.bbox.clear();
-
 
 			// first we do position and ID because we need those two for sure
 			for (int i=0;i<pvCache.particles->numParticles();i++)
@@ -1035,10 +1066,7 @@ MStatus partioInstancer::compute( const MPlug& plug, MDataBlock& block )
             } // end if frame/attrs changed
 
         } // end if particles
-		else
-		{
-			pvCache.instanceData.clear();
-		}
+
         //cout << pvCache.instanceData.list()<< endl;
         block.outputValue(aInstanceData).set(pvCache.instanceDataObj);
         block.setClean(aInstanceData);
