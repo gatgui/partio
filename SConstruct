@@ -1,6 +1,5 @@
 import os
 import sys
-import glob
 import excons
 import excons.tools.dl as dl
 import excons.tools.gl as gl
@@ -10,21 +9,22 @@ import excons.tools.python as python
 import excons.tools.glew as glew
 import excons.tools.maya as maya
 
+excons.InitGlobals()
 
-use_zlib = (excons.GetArgument("partio-use-zlib", 1, int) != 0)
-use_seexpr = (excons.GetArgument("partio-use-seexpr", 0, int) != 0)
-
-# Don't use zlib in GTO, doesn't seem very stable
-excons.SetArgument("gto-use-zlib", 0)
-# SeExpr support requires C++11
-excons.SetArgument("use-c++11", 1 if use_seexpr else 0)
-
-
-build_maya = ("maya" in BUILD_TARGETS)
+build_maya = (maya.Version() != "")
 if build_maya:
    maya.SetupMscver()
 
+# SeExpr support requires C++11, this needs to be set before creating the environment
+use_seexpr = (excons.GetArgument("partio-use-seexpr", 0, int) != 0)
+excons.SetArgument("use-c++1", 1 if use_seexpr else 0)
+
 env = excons.MakeBaseEnv()
+
+use_zlib = (excons.GetArgument("partio-use-zlib", 1, int) != 0)
+# Don't use zlib in GTO, doesn't seem very stable
+excons.SetArgument("gto-use-zlib", 0)
+
 
 libdefs = []
 
@@ -36,7 +36,7 @@ cmnlibs = []
 cmncusts = []
 
 if sys.platform == "win32":
-   cmndefs.extend(["PARTIO_WIN32", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_DEPRECATE"])
+   cmndefs.extend(["PARTIO_WIN32", "_CRT_NONSTDC_NO_DEPRECATE"])
    if excons.warnl != "all":
      cmncppflags += " -wd4267 -wd4244"
 else:
@@ -63,75 +63,78 @@ if use_seexpr:
       cmncusts.append(dl.Require)
 
 
-excons.Call("gto")
-Import("RequireGto")
+excons.Call("gto", imp=["RequireGto"])
 
 cmncusts.append(RequireGto(static=True))
 
-partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", glob.glob("src/lib/*.h"))
+partio_headers = env.Install(excons.OutputBaseDirectory() + "/include", excons.glob("src/lib/*.h"))
 
 swig_builder = Builder(action='$SWIG -o $TARGET -c++ -python -Wall %s $SOURCE' % swig_opts, suffix='.cpp', src_suffix='.i')
 env.Append(BUILDERS={"SwigGen": swig_builder})
 
+def PartioName():
+  return "partio"
+
+def PartioPath():
+  name = PartioName()
+  if sys.platform == "win32":
+    libname = name + ".lib"
+  else:
+    libname = "lib" + name + ".a"
+  return excons.OutputBaseDirectory() + "/lib/" + libname
+
+def RequirePartio(env):
+  env.Append(CPPDEFINES=cmndefs)
+  env.Append(CPPFLAGS=cmncppflags)
+  env.Append(CPPPATH=[excons.OutputBaseDirectory() + "/include"] + cmnincdirs)
+  excons.Link(env, PartioPath(), static=True, force=True, silent=True)
+  env.Append(LIBPATH=cmnlibdirs)
+  env.Append(LIBS=cmnlibs)
+  for c in cmncusts:
+    c(env)
+
 prjs = [
    {"name": "partio",
     "type": "staticlib",
+    "alias": "partio-lib",
     "defs": cmndefs + libdefs,
     "cppflags": cmncppflags,
     "incdirs": cmnincdirs,
-    "srcs": glob.glob("src/lib/core/*.cpp") +
-            glob.glob("src/lib/io/*.cpp") +
+    "srcs": excons.glob("src/lib/core/*.cpp") +
+            excons.glob("src/lib/io/*.cpp") +
             # RPC requires zlib
-            (glob.glob("src/lib/io/3rdParty/nextLimit/*.cpp") if use_zlib else []) +
-            glob.glob("src/lib/*.cpp"),
+            (excons.glob("src/lib/io/3rdParty/nextLimit/*.cpp") if use_zlib else []) +
+            excons.glob("src/lib/*.cpp"),
     "custom": cmncusts
    },
    {"name": "partattr",
     "type": "program",
-    "alias": "tools",
-    "defs": cmndefs,
-    "incdirs": cmnincdirs,
-    "cppflags": cmncppflags,
-    "incdirs": cmnincdirs,
+    "alias": "partio-tools",
     "srcs": ["src/tools/partattr.cpp"],
-    "libdirs": cmnlibdirs,
-    "staticlibs": ["partio"] + cmnlibs,
-    "custom": cmncusts
+    "custom": [RequirePartio]
    },
    {"name": "partinfo",
     "type": "program",
-    "alias": "tools",
-    "defs": cmndefs,
-    "cppflags": cmncppflags,
-    "incdirs": cmnincdirs,
+    "alias": "partio-tools",
     "srcs": ["src/tools/partinfo.cpp"],
-    "libdirs": cmnlibdirs,
-    "staticlibs": ["partio"] + cmnlibs,
-    "custom": cmncusts
+    "custom": [RequirePartio]
    },
    {"name": "partconv",
     "type": "program",
-    "alias": "tools",
-    "defs": cmndefs,
-    "cppflags": cmncppflags,
-    "incdirs": cmnincdirs,
+    "alias": "partio-tools",
     "srcs": ["src/tools/partconv.cpp"],
-    "libdirs": cmnlibdirs,
-    "staticlibs": ["partio"] + cmnlibs,
-    "custom": cmncusts
+    "custom": [RequirePartio]
    },
    {"name": "partview",
     "type": "program",
-    "alias": "tools",
-    "defs": cmndefs,
-    "cppflags": cmncppflags + ("" if sys.platform != "darwin" else " -Wno-deprecated-declarations"),
-    "incdirs": cmnincdirs,
+    "alias": "partio-tools",
+    "cppflags": ("" if sys.platform != "darwin" else " -Wno-deprecated-declarations"),
     "srcs": ["src/tools/partview.cpp"],
-    "libdirs": cmnlibdirs,
-    "staticlibs": ["partio"] + cmnlibs,
-    "custom": cmncusts + [glut.Require, gl.Require]
+    "custom": [RequirePartio, glut.Require, gl.Require]
    }
 ]
+
+Export("PartioName PartioPath RequirePartio")
 
 # Python
 swig = excons.GetArgument("with-swig", None)
@@ -143,24 +146,19 @@ if swig:
    py_prefix = python.ModulePrefix() + "/" + python.Version()
    prjs.append({"name": "_partio",
                 "type": "dynamicmodule",
-                "alias": "python",
+                "alias": "partio-python",
                 "ext": python.ModuleExtension(),
                 "prefix": py_prefix,
-                "defs": cmndefs,
-                "cppflags": cmncppflags,
-                "incdirs": cmnincdirs,
                 "srcs": [gen[0]],
-                "libdirs": cmnlibdirs,
-                "staticlibs": ["partio"] + cmnlibs,
-                "custom": cmncusts + [python.SoftRequire],
+                "custom": [RequirePartio, python.SoftRequire],
                 "install": {py_prefix: [gen[1]]}})
 
 # Maya
 if build_maya:
    maya_prefix = "maya/" + maya.Version(nice=True)
    # Use regex from gto on windows
-   mayadefs = cmndefs
-   mayaincdirs = cmnincdirs
+   mayadefs = []
+   mayaincdirs = []
    mayacppflags = ""
    if sys.platform == "win32":
       mayadefs.append("REGEX_STATIC")
@@ -169,47 +167,37 @@ if build_maya:
       mayacppflags += " -Wno-unused-parameter"
    prjs.append({"name": "partio4Maya",
                 "type": "dynamicmodule",
-                "alias": "maya",
+                "alias": "partio-maya",
                 "ext": maya.PluginExt(),
                 "prefix": maya_prefix + "/plug-ins",
                 "defs": mayadefs,
                 "cppflags": mayacppflags,
                 "incdirs": mayaincdirs,
-                "srcs": glob.glob("contrib/partio4Maya/*.cpp"),
-                "libdirs": cmnlibdirs,
-                "staticlibs": ["partio"] + cmnlibs,
-                "custom": [maya.Require, glew.Require, gl.Require] + cmncusts,
-                "install": {maya_prefix + "/icons": glob.glob("contrib/partio4Maya/icons/*"),
-                            maya_prefix + "/scripts": glob.glob("contrib/partio4Maya/scripts/*")}})
+                "srcs": excons.glob("contrib/partio4Maya/*.cpp"),
+                "custom": [maya.Require, RequirePartio, glew.Require, gl.Require],
+                "install": {maya_prefix + "/icons": excons.glob("contrib/partio4Maya/icons/*"),
+                            maya_prefix + "/scripts": excons.glob("contrib/partio4Maya/scripts/*")}})
 
 # Tests
-tests = filter(lambda x: x.endswith("_main.cpp"), glob.glob("src/tests/*.cpp"))
+tests = filter(lambda x: x.endswith("_main.cpp"), excons.glob("src/tests/*.cpp"))
 for test in tests:
    name = os.path.basename(test).replace("_main.cpp", "")
-   srcs = glob.glob(test.replace("_main.cpp", "*.cpp"))
+   srcs = excons.glob(test.replace("_main.cpp", "*.cpp"))
    prjs.append({"name": name,
                 "type": "program",
                 "alias": "tests",
                 "prefix": "../tests",
-                "defs": cmndefs,
-                "cppflags": cmncppflags,
-                "incdirs": cmnincdirs + ["src/lib"],
+                "incdirs": ["src/lib"],
                 "srcs": srcs,
-                "libdirs": cmnlibdirs,
-                "staticlibs": ["partio"] + cmnlibs,
-                "custom": cmncusts})
+                "custom": [RequirePartio]})
 for test in ["makecircle", "makeline", "testcluster", "testse"]:
    prjs.append({"name": test,
                 "type": "program",
                 "alias": "tests",
                 "prefix": "../tests",
-                "defs": cmndefs,
-                "cppflags": cmncppflags,
-                "incdirs": cmnincdirs + ["src/lib"],
+                "incdirs": ["src/lib"],
                 "srcs": ["src/tests/%s.cpp" % test],
-                "libdirs": cmnlibdirs, 
-                "staticlibs": ["partio"] + cmnlibs,
-                "custom": cmncusts})
+                "custom": [RequirePartio]})
 
 build_opts = """PARTIO OPTIONS
   partio-use-zlib=0|1   : Enable zlib compression.                 [1]
@@ -217,5 +205,27 @@ build_opts = """PARTIO OPTIONS
 excons.AddHelpOptions(partio=build_opts)
 
 tgts = excons.DeclareTargets(env, prjs)
+tgts["partio-headers"] = partio_headers
 
-env.Depends(tgts["partio"], partio_headers)
+env.Depends(tgts["partio-lib"], partio_headers)
+
+# Ecosystem
+
+ecoroot = "/" + excons.EcosystemPlatform()
+
+tgtdirs = {"partio-lib": ecoroot + "/lib",
+           "partio-headers": ecoroot + "/include",
+           "partio-tools": ecoroot + "/bin"}
+if swig:
+  tgts["partio-python"].append(gen[1])
+  tgtdirs["partio-python"] = "%s/lib/python/%s" % (ecoroot, python.Version())
+if build_maya:
+  tgts["partio-maya-scripts"] = excons.glob("contrib/partio4Maya/scripts/*")
+  tgts["partio-maya-icons"] = excons.glob("contrib/partio4Maya/icons/*")
+  tgtdirs["partio-maya"] = "%s/maya/%s/plug-ins" % (ecoroot, maya.Version(nice=True))
+  tgtdirs["partio-maya-scripts"] = "%s/maya/%s/scripts" % (ecoroot, maya.Version(nice=True))
+  tgtdirs["partio-maya-icons"] = "%s/maya/%s/icons" % (ecoroot, maya.Version(nice=True))
+
+excons.EcosystemDist(env, "partio.env", tgtdirs, version="0.9.8")
+
+

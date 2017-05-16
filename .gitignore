@@ -59,6 +59,7 @@ env.*
 /src/py/partio_*.cpp
 /src/py/partio.py
 /excons.cache
+/eco
 /dist
 /release
 /debug
@@ -66,3 +67,4 @@ env.*
 /test.*
 /circle.*
 /testse.gto
+/partio.env.tmp
