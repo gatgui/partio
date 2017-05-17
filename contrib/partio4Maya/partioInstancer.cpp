@@ -274,12 +274,73 @@ namespace {
     }
 }
 
-partioInstReaderCache::partioInstReaderCache() :
-        bbox(MBoundingBox(MPoint(0, 0, 0, 0), MPoint(0, 0, 0, 0))),
-        particles(NULL)
+partioInstReaderCache::partioInstReaderCache()
+   : bbox(MBoundingBox(MPoint(0, 0, 0, 0), MPoint(0, 0, 0, 0)))
+   , dList(0)
+   , particles(NULL)
 {
+    MStatus stat;
+
+    instanceDataObj = instanceData.create(&stat);
+    CHECK_MSTATUS(stat);
+
+    clear();
 }
 
+partioInstReaderCache::~partioInstReaderCache()
+{
+    clear();
+}
+
+void partioInstReaderCache::clear()
+{
+    if (particles)
+    {
+        particles->release();
+        particles = NULL;
+    }
+
+    positionAttr.type = Partio::NONE;
+    positionAttr.attributeIndex = -1;
+    idAttr.type = Partio::NONE;
+    idAttr.attributeIndex = -1;
+    velocityAttr.type = Partio::NONE;
+    velocityAttr.attributeIndex = -1;
+    angularVelocityAttr.type = Partio::NONE;
+    angularVelocityAttr.attributeIndex = -1;
+    rotationAttr.type = Partio::NONE;
+    rotationAttr.attributeIndex = -1;
+    aimDirAttr.type = Partio::NONE;
+    aimDirAttr.attributeIndex = -1;
+    aimPosAttr.type = Partio::NONE;
+    aimPosAttr.attributeIndex = -1;
+    aimAxisAttr.type = Partio::NONE;
+    aimAxisAttr.attributeIndex = -1;
+    aimUpAttr.type = Partio::NONE;
+    aimUpAttr.attributeIndex = -1;
+    aimWorldUpAttr.type = Partio::NONE;
+    aimWorldUpAttr.attributeIndex = -1;
+    lastRotationAttr.type = Partio::NONE;
+    lastRotationAttr.attributeIndex = -1;
+    scaleAttr.type = Partio::NONE;
+    scaleAttr.attributeIndex = -1;
+    lastScaleAttr.type = Partio::NONE;
+    lastScaleAttr.attributeIndex = -1;
+    lastAimDirAttr.type = Partio::NONE;
+    lastAimDirAttr.attributeIndex = -1;
+    lastAimPosAttr.type = Partio::NONE;
+    lastAimPosAttr.attributeIndex = -1;
+    lastPosAttr.type = Partio::NONE;
+    lastPosAttr.attributeIndex = -1;
+    indexAttr.type = Partio::NONE;
+    indexAttr.attributeIndex = -1;
+    displayColorAttr.type = Partio::NONE;
+    displayColorAttr.attributeIndex = -1;
+
+    bbox.clear();
+
+    instanceData.clear();
+}
 
 /// Constructor
 partioInstancer::partioInstancer() :
@@ -314,23 +375,11 @@ partioInstancer::partioInstancer() :
         m_drawError(0),
         m_cacheChanged(false)
 {
-    pvCache.particles = 0;
-
-    // create the instanceData object
-    MStatus stat;
-    pvCache.instanceDataObj = pvCache.instanceData.create(&stat);
-    CHECK_MSTATUS(stat);
-
 }
 
 /// DESTRUCTOR
 partioInstancer::~partioInstancer()
 {
-    if (pvCache.particles)
-        pvCache.particles->release();
-    pvCache.instanceData.clear();
-    pvCache.instanceDataObj.~MObject();
-
     MSceneMessage::removeCallback(partioInstancerOpenCallback);
     MSceneMessage::removeCallback(partioInstancerImportCallback);
     MSceneMessage::removeCallback(partioInstancerReferenceCallback);
@@ -780,19 +829,7 @@ MStatus partioInstancer::compute(const MPlug& plug, MDataBlock& block)
 
         if (newCacheFile == "" || !partio4Maya::cacheExists(newCacheFile.asChar()))
         {
-            if (pvCache.particles != NULL)
-            {
-                PARTIO::ParticlesDataMutable* newParticles;
-                newParticles = pvCache.particles;
-                pvCache.particles = NULL; // resets the pointer
-
-                if (newParticles != NULL)
-                {
-                    newParticles->release(); // frees the mem
-                }
-            }
-            pvCache.bbox.clear();
-            pvCache.instanceData.clear();
+            pvCache.clear();
             m_lastFileLoaded = "";
             m_drawError = 1;
         }
@@ -801,36 +838,16 @@ MStatus partioInstancer::compute(const MPlug& plug, MDataBlock& block)
             m_cacheChanged = true;
             MGlobal::displayWarning(MString("PartioInstancer->Loading: " + newCacheFile));
 
-            if (pvCache.particles != NULL)
-            {
-                PARTIO::ParticlesDataMutable* newParticles;
-                newParticles = pvCache.particles;
-                pvCache.particles = NULL; // resets the pointer
-
-                if (newParticles != NULL)
-                {
-                    newParticles->release(); // frees the mem
-                }
-            }
+            pvCache.clear();
             pvCache.particles = PARTIO::read(newCacheFile.asChar());
 
             m_lastFileLoaded = newCacheFile;
-            if (pvCache.particles->numParticles() == 0)
-            {
-                pvCache.instanceData.clear();
-                return (MS::kSuccess);
-            }
 
-            char partCount[50];
-            sprintf(partCount, "%d", pvCache.particles->numParticles());
-            //MGlobal::displayInfo(MString("PartioInstancer-> LOADED: ") + partCount + MString(" particles"));
             block.outputValue(aForceReload).setBool(false);
             block.setClean(aForceReload);
-
-            pvCache.instanceData.clear();
         }
 
-        if (pvCache.particles)
+        if (pvCache.particles && m_cacheChanged)
         {
             if (!pvCache.particles->attributeInfo("id", pvCache.idAttr) &&
                 !pvCache.particles->attributeInfo("ID", pvCache.idAttr) &&
@@ -865,33 +882,36 @@ MStatus partioInstancer::compute(const MPlug& plug, MDataBlock& block)
             {
                 if (velocitySource == VS_BUILTIN)
                 {
-                    if ((pvCache.particles->attributeInfo("velocity", pvCache.velocityAttr) ||
-                         pvCache.particles->attributeInfo("Velocity", pvCache.velocityAttr)) ||
+                    if (pvCache.particles->attributeInfo("velocity", pvCache.velocityAttr) ||
+                        pvCache.particles->attributeInfo("Velocity", pvCache.velocityAttr) ||
+                        pvCache.particles->attributeInfo("vel", pvCache.velocityAttr) ||
+                        pvCache.particles->attributeInfo("Vel", pvCache.velocityAttr) ||
+                        pvCache.particles->attributeInfo("v", pvCache.velocityAttr) ||
                         pvCache.particles->attributeInfo("V", pvCache.velocityAttr))
                     {
-                        if (pvCache.velocityAttr.type == PARTIO::VECTOR)
-                            m_canMotionBlur = true;
+                        m_canMotionBlur = (pvCache.velocityAttr.type == PARTIO::VECTOR);
                     }
                 }
                 else if (velocitySource == VS_CUSTOM_CHANNEL)
                 {
-                    if (pvCache.particles->attributeInfo(velocityFrom.asChar(), pvCache.velocityAttr) &&
-                        (pvCache.velocityAttr.type == PARTIO::VECTOR))
-                        m_canMotionBlur = true;
+                    if (pvCache.particles->attributeInfo(velocityFrom.asChar(), pvCache.velocityAttr))
+                    {
+                        m_canMotionBlur = (pvCache.velocityAttr.type == PARTIO::VECTOR);
+                    }
                 }
                 else
                 {
-                    if (pvCache.particles->attributeInfo(lastPositionFrom.asChar(), pvCache.lastPosAttr) &&
-                        (pvCache.lastPosAttr.type == PARTIO::VECTOR))
-                        m_canMotionBlur = true;
+                    if (pvCache.particles->attributeInfo(lastPositionFrom.asChar(), pvCache.lastPosAttr))
+                    {
+                        m_canMotionBlur = (pvCache.lastPosAttr.type == PARTIO::VECTOR);
+                    }
                 }
 
                 if (!m_canMotionBlur)
-                    MGlobal::displayWarning(
-                            "PartioInstancer->Failed to find velocity attribute motion blur will be impaired ");
+                {
+                    MGlobal::displayWarning("PartioInstancer->Failed to find velocity attribute motion blur will be impaired ");
+                }
             }
-
-            pvCache.bbox.clear();
 
             const float velocityMultiplier = veloMult * deltaTime / fps;
 
@@ -1264,8 +1284,7 @@ MStatus partioInstancer::compute(const MPlug& plug, MDataBlock& block)
             } // end if frame/attrs changed
 
         } // end if particles
-        else
-            pvCache.instanceData.clear();
+
         //cout << pvCache.instanceData.list()<< endl;
         block.outputValue(aInstanceData).set(pvCache.instanceDataObj);
         block.setClean(aInstanceData);

@@ -91,6 +91,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 class partioInstReaderCache {
 public:
     partioInstReaderCache();
+    ~partioInstReaderCache();
+
+    void clear();
 
     MBoundingBox bbox;
     int dList;

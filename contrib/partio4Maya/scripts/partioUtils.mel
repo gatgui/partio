@@ -196,7 +196,23 @@ global proc pioAEcacheFileBrowser( string $cmd, string $cacheName )
     string  $workspace = `workspace -q -fn`;
     setWorkingDirectory $workspace "diskCache" "data";
 
-    fileBrowser ($cmd, "Partio Cache Directory", "", 0);
+    string $ff = pioGetFormatFilters();
+    if ($ff == 0)
+    {
+        warning("No available format for PartIO");
+        return;
+    }
+
+    string $result[] = `fileDialog2 -fileMode 1 -caption "Partio Cache" -fileFilter $ff -returnFilter true`;
+
+    if (size($result) > 0)
+    {
+        string $tmp[];
+        int $n = `tokenize $result[size($result)-1] " " $tmp`;
+        string $fmt = `tolower $tmp[0]`;
+
+        eval($cmd + " \"" + $result[0] + "\" \"" + $fmt + "\"");
+    }
 }
 
 global proc string pioStripNodeName (string $nodeName)
