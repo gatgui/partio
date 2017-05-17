@@ -2,6 +2,7 @@
 #define PARTIOTESTING_H
 
 #include <iostream>
+#include <algorithm>
 #include <cmath>
 
 #define TESTASSERT(x)\

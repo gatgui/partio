@@ -16,7 +16,8 @@ if build_maya:
    maya.SetupMscver()
 
 # SeExpr support requires C++11, this needs to be set before creating the environment
-use_seexpr = (excons.GetArgument("partio-use-seexpr", 0, int) != 0)
+seexpr_inc, seexpr_lib = excons.GetDirs("seexpr")
+use_seexpr = (seexpr_inc or seexpr_lib)
 excons.SetArgument("use-c++1", 1 if use_seexpr else 0)
 
 env = excons.MakeBaseEnv()
@@ -51,7 +52,6 @@ swig_opts = ""
 if use_seexpr:
    cmndefs.append("PARTIO_USE_SEEXPR")
    swig_opts = "-DPARTIO_USE_SEEXPR"
-   seexpr_inc, seexpr_lib = excons.GetDirs("seexpr")
    if seexpr_inc:
       cmnincdirs.append(seexpr_inc)
    if seexpr_lib:
@@ -128,7 +128,7 @@ prjs = [
    {"name": "partview",
     "type": "program",
     "alias": "partio-tools",
-    "cppflags": ("" if sys.platform != "darwin" else " -Wno-deprecated-declarations"),
+    "cppflags": ("" if sys.platform == "win32" else " -Wno-deprecated-declarations"),
     "srcs": ["src/tools/partview.cpp"],
     "custom": [RequirePartio, glut.Require, gl.Require]
    }
@@ -185,7 +185,7 @@ for test in tests:
    srcs = excons.glob(test.replace("_main.cpp", "*.cpp"))
    prjs.append({"name": name,
                 "type": "program",
-                "alias": "tests",
+                "alias": "partio-tests",
                 "prefix": "../tests",
                 "incdirs": ["src/lib"],
                 "srcs": srcs,
@@ -193,15 +193,14 @@ for test in tests:
 for test in ["makecircle", "makeline", "testcluster", "testse"]:
    prjs.append({"name": test,
                 "type": "program",
-                "alias": "tests",
+                "alias": "partio-tests",
                 "prefix": "../tests",
                 "incdirs": ["src/lib"],
                 "srcs": ["src/tests/%s.cpp" % test],
                 "custom": [RequirePartio]})
 
 build_opts = """PARTIO OPTIONS
-  partio-use-zlib=0|1   : Enable zlib compression.                 [1]
-  partio-use-seexpr=0|1 : Enable particle expression using SeExpr. [0]"""
+  partio-use-zlib=0|1   : Enable zlib compression. [1]"""
 excons.AddHelpOptions(partio=build_opts)
 
 tgts = excons.DeclareTargets(env, prjs)

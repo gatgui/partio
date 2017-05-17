@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 #define TESTKDTREE_H
 
 #include <memory>
-
+#include <algorithm>
 #include <Partio.h>
 #include "core/KdTree.h"
 
