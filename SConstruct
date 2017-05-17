@@ -175,6 +175,7 @@ if build_maya:
                 "incdirs": mayaincdirs,
                 "srcs": excons.glob("contrib/partio4Maya/*.cpp") + ["src/ext/glew-2.0.0/src/glew.c"],
                 "custom": [maya.Require, RequirePartio, gl.Require],
+                "libs": (["shell32"] if sys.platform == "win32" else []),
                 "install": {maya_prefix + "/icons": excons.glob("contrib/partio4Maya/icons/*"),
                             maya_prefix + "/scripts": excons.glob("contrib/partio4Maya/scripts/*")}})
 

@@ -148,11 +148,11 @@ namespace {
 
         static void drawBillboardCircleAtPoint(const float* position, float radius, int drawType, BillboardDrawData& data, const MMatrix& world_view_matrix)
         {
-            static MMatrix world_view_source = MMatrix::identity;
+            MMatrix world_view_source = MMatrix::identity;
             world_view_source[3][0] = position[0];
             world_view_source[3][1] = position[1];
             world_view_source[3][2] = position[2];
-            static __thread float world_view[4][4];
+            float world_view[4][4];
             (world_view_source * world_view_matrix).get(world_view);
             world_view[0][0] = 1.0f;
             world_view[0][1] = 0.0f;
@@ -425,7 +425,7 @@ namespace MHWRender {
         if (draw_data == 0)
             return;
 
-        const bool draw_bounding_box = context.getDisplayStyle() & MHWRender::MFrameContext::kBoundingBox;
+        const bool draw_bounding_box = ((context.getDisplayStyle() & MHWRender::MFrameContext::kBoundingBox) != 0);
 
         bool draw_cache = true;
         bool draw_logo = true;
