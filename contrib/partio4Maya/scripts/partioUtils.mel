@@ -374,11 +374,7 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
 
     if ($target == "")
     {
-        string $trsh[] = `nParticle`;
-        setAttr ($trsh[1]+".isDynamic") 0;
-        setAttr ($trsh[1]+".particleRenderType") 3; // render as points
-        setAttr ($trsh[1]+".colorInput") 0; // constant color shading
-        partioImport -aa -de -p $trsh[1] $path;
+        $target = `partioImport -aa -de $path`;
     }
 
     string $cache = "";
