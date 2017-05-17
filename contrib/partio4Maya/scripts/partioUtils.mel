@@ -369,11 +369,16 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
         $basename += "." + $tmp[$i];
     }
 
+    // Save current selection
+    string $sel[] = `ls -sl`;
+
     if ($target == "")
     {
         string $trsh[] = `nParticle`;
         setAttr ($trsh[1]+".isDynamic") 0;
-        partioImport -aa -p $trsh[1] $path;
+        setAttr ($trsh[1]+".particleRenderType") 3; // render as points
+        setAttr ($trsh[1]+".colorInput") 0; // constant color shading
+        partioImport -aa -de -p $trsh[1] $path;
     }
 
     string $cache = "";
@@ -397,7 +402,17 @@ global proc string attachPartioCacheEx(string $path, string $fmt, string $target
     string $piofl = `createNode -name partioForceLoad -shared partioForceLoad`;
     addAttr -ln partioForceLoad -sn piofl -at message $cache;
     connectAttr ($piofl+".message") ($cache+".piofl");
-    
+
+    // Restore current selection
+    if (size($sel) > 0)
+    {
+        select -r $sel;
+    }
+    else
+    {
+        select -clear;
+    }
+
     return $cache;
 }
 
