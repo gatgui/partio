@@ -160,8 +160,9 @@ namespace {
     }
 }
 
-partioVizReaderCache::partioVizReaderCache() :
-        particles(0)
+partioVizReaderCache::partioVizReaderCache()
+   : bbox(MBoundingBox(MPoint(0,0,0,0), MPoint(0,0,0,0)))
+   , particles(NULL)
 {
     clear();
 }
@@ -178,7 +179,7 @@ void partioVizReaderCache::clear()
         particles->release();
         // partio does an internal caching of the data,
         // so it will free the pointer accordingly
-        particles = 0;
+        particles = NULL;
     }
 
     bbox.clear();
@@ -812,7 +813,7 @@ MStatus partioVisualizer::compute(const MPlug& plug, MDataBlock& block)
             {
                 renderCachePath = cacheDir + "/" + cacheFile;
             }
-            else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_EXACT, t, it))
+            else if (partio4Maya::findCacheFile(mCacheFiles, partio4Maya::FM_CLOSEST, t, it))
             {
                 renderCachePath = it->second;
             }
