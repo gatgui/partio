@@ -47,6 +47,10 @@ static const char *kListAttribS = "-la";
 static const char *kListAttribL = "-listAttributes";
 static const char *kAttribTypeS = "-at";
 static const char *kAttribTypeL = "-attributeType";
+static const char *kExclAttrFlagS = "-ea";
+static const char *kExclAttrFlagL = "-excludeAttribute";
+static const char *kDontEmitS = "-de";
+static const char *kDontEmitL = "-dontEmit";
 
 
 bool PartioImport::hasSyntax() const
@@ -64,11 +68,14 @@ MSyntax PartioImport::createSyntax()
     syntax.addFlag(kAllAttribFlagS, kAllAttribFlagL, MSyntax::kNoArg);
     syntax.addFlag(kAttributeFlagS, kAttributeFlagL, MSyntax::kString, MSyntax::kString);
     syntax.makeFlagMultiUse(kAttributeFlagS);
+    syntax.addFlag(kExclAttrFlagS, kExclAttrFlagL, MSyntax::kString);
+    syntax.makeFlagMultiUse( kExclAttrFlagS );
     syntax.addFlag(kFlipFlagS, kFlipFlagL, MSyntax::kNoArg);
     syntax.addFlag(kListAttribS, kListAttribL, MSyntax::kNoArg);
     syntax.addFlag(kAttribTypeS, kAttribTypeL, MSyntax::kString);
     syntax.makeFlagMultiUse( kAttribTypeS );
     syntax.makeFlagQueryWithFullArgs( kAttribTypeS, true );
+    syntax.addFlag(kDontEmitS, kDontEmitL, MSyntax::kNoArg);
     syntax.setObjectType(MSyntax::kStringObjects, 1, 1);
     syntax.useSelectionAsDefault(false);
 
@@ -223,12 +230,24 @@ MStatus PartioImport::doIt(const MArgList& Args)
 
     /// loop thru the rest of the attributes given
     MStringArray attrNames;
+    MStringArray exclNames;
     MStringArray mayaAttrNames;
     MString idAttrName = "";
     MString positionAttrName = "";
     MString velocityAttrName = "";
     bool worldPosition = false;
     bool worldVelocity = false;
+
+    if (allAttribs)
+    {
+	     MString exclName;
+	     unsigned int numExcl = argData.numberOfFlagUses( kExclAttrFlagL );
+	     for (unsigned int i=0; i<numExcl; ++i)
+	     {
+	         argData.getFlagArgument( kExclAttrFlagL, 0, exclName );
+	         exclNames.append(exclName);
+	     }
+    }
 
     for (unsigned int i = 0; i < numUses; i++)
     {
@@ -353,7 +372,32 @@ MStatus PartioImport::doIt(const MArgList& Args)
             partSys.setPerParticleAttribute("position", empty);
             partSys.setPerParticleAttribute("velocity", empty);
         }
-        
+        else
+        {
+            MPlug plug;
+
+            // Disable dynamics on newly created particle shapes
+            plug = partSys.findPlug("isDynamic");
+            if (!plug.isNull())
+            {
+                plug.setBool(false);
+            }
+
+            // Set new particles render type to 'points' (easier on the viewport)
+            plug = partSys.findPlug("particleRenderType");
+            if (!plug.isNull())
+            {
+                plug.setInt(3);
+            }
+
+            // Set new particles shading color to constant
+            plug = partSys.findPlug("colorInput");
+            if (!plug.isNull())
+            {
+                plug.setInt(0);
+            }
+        }
+
         MGlobal::displayInfo(MString("PartioImport-> LOADING: ") + particleCache);
         particles = Partio::read(particleCache.asChar());
 
@@ -393,8 +437,9 @@ MStatus PartioImport::doIt(const MArgList& Args)
         {
             validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
         }
-        else
+        else if (allAttribs)
         {
+            // Check for predefined velocity attribute names only if all attributes are to be read
             worldVelocity = true;
             velocityAttrName = "worldVelocity";
             validVelocity = particles->attributeInfo(velocityAttrName.asChar(), velocityAttr);
@@ -419,6 +464,19 @@ MStatus PartioImport::doIt(const MArgList& Args)
                     }
                 }
             }
+            if (validVelocity)
+            {
+                // Check if attribute is excluded
+                for (unsigned int i=0; i<exclNames.length(); ++i)
+                {
+                    if (velocityAttrName == exclNames[i])
+                    {
+                        velocityAttrName = "";
+                        validVelocity = false;
+                        break;
+                    }
+                }
+            }
         }
         if (!validVelocity)
         {
@@ -435,6 +493,20 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 particles->attributeInfo(ai, pioAttr);
                 // Here, we use same attribute name for maya
                 MString attrName = pioAttr.name.c_str();
+                // Skip excluded attribute
+                bool exclude = false;
+                for (unsigned int aj=0; aj<exclNames.length(); ++aj)
+                {
+                    if (attrName == exclNames[aj])
+                    {
+                        exclude = true;
+                        break;
+                    }
+                }
+                if (exclude)
+                {
+                    continue;
+                }
                 // First check if attribute is not already bound
                 bool found = false;
                 for (unsigned int aj=0; aj<mayaAttrNames.length(); ++aj)
@@ -553,12 +625,15 @@ MStatus PartioImport::doIt(const MArgList& Args)
         wm = objPath.inclusiveMatrix();
         iwm = objPath.inclusiveMatrixInverse();
 
-        // If particle node just created, world space == object space
+        bool dontEmit = argData.isFlagSet(kDontEmitL);
+        // Note 1: If we emit, velocities MUST be in worldspace
+        // Note 2: If particle node was just created (makeParticle true), world space == object space
+
         if (makeParticle)
         {
-            // setup worldPosition and worldVelocity so that no matrix multiplication occurs
+            // Setup worldPosition and worldVelocity flags to avoid matrix multiplications
             worldPosition = false;
-            worldVelocity = true;
+            worldVelocity = !dontEmit;
         }
 
         for (int i=0;i<particles->numParticles();i++)
@@ -571,7 +646,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
             {
                 const float * partioVelocities = particles->data<float>(velocityAttr,i);
                 MVector vel (partioVelocities[0], partioVelocities[1], partioVelocities[2]);
-                velocities.append(worldVelocity ? vel : vel*wm);
+                velocities.append(dontEmit ? (worldVelocity ? vel*iwm : vel) : (worldVelocity ? vel : vel*wm));
             }
 
             if (vectorAttrArrays.size() > 0)
@@ -596,14 +671,6 @@ MStatus PartioImport::doIt(const MArgList& Args)
                 }
             }
         }
-        if (!validVelocity)
-        {
-            velocities.setLength(particles->numParticles());
-            for (int i=0; i<particles->numParticles(); ++i)
-            {
-                velocities[i] = MVector::zero;
-            }
-        }
 
         /// Emit particles
         if (particles)
@@ -611,10 +678,38 @@ MStatus PartioImport::doIt(const MArgList& Args)
             particles->release();
         }
 
-        // Seems to MFnParticleSystem expects velocities in world space and positions in local space
-        // Don't ask me why but this is the only way to get matching object-space velocities
-        stat = partSys.emit(positions, velocities);
-        //partSys.setCount(positions.length());
+        if (dontEmit)
+        {
+            unsigned int npt = positions.length();
+
+            partSys.setCount(npt);
+
+            MVectorArray pnts(npt);
+            for (unsigned int i=0; i<npt; ++i)
+            {
+                pnts[i] = MVector(positions[i]);
+            }
+            partSys.setPerParticleAttribute("position", pnts);
+
+            if (validVelocity)
+            {
+                partSys.setPerParticleAttribute("velocity", velocities);
+            }
+        }
+        else
+        {
+            if (validVelocity)
+            {
+                // Seems to MFnParticleSystem expects velocities in world space and positions in local space
+                // Don't ask me why but this is the only way to get matching object-space velocities
+                // ... AND THIS IS DEAD SLOW WITH A MILLION PARTICLES!
+                stat = partSys.emit(positions, velocities);
+            }
+            else
+            {
+                stat = partSys.emit(positions);
+            }
+        }
 
         for (doubleIt = doubleAttrArrays.begin(); doubleIt != doubleAttrArrays.end(); doubleIt++)
         {
@@ -646,8 +741,14 @@ void PartioImport::printUsage()
     usage += "\t[Options]\n";
     usage += "\t\t-p/particle <particleShapeName> (if none defined, one will be created)";
     usage += "\t\t-atr/attribute (multi use) <cache Attr Name>  <PP attribute name>\n";
-    usage += "\t\t     (position/velocity/id) are always imported \n";
+    usage += "\t\t     (position/id) are always imported \n";
     //usage += "\t\t-flp/flip  (flip y->z axis to go to Z up packages) \n";
+    usage += "\t\t-aa/allAttributes (read all attributes in cache)\n";
+    usage += "\t\t-ea/excludeAttribute <cache Attr Name> (use with -aa, exclude a specific attribute from cache)\n";
+    usage += "\t\t-la/listAttributes <cache Attr Name (query mode only)\n";
+    usage += "\t\t-at/attributeType <cache Attr Name (query mode only)\n";
+    usage += "\t\t-de/dontEmit (don't emit particles but directly set their position and optinally velocity instead)\n";
+    usage += "\t\t-h/help\n";    
     usage += "\n";
     usage += "\tExample:\n";
     usage += "\n";
