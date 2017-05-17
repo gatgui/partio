@@ -59,9 +59,9 @@ using namespace std;
 
 typedef struct{
     int verificationCode;
-    uint version; // current version = 3
-	uint numParticles;
-	uint numChannels;
+    uint32_t version; // current version = 3
+	uint32_t numParticles;
+	uint32_t numChannels;
 	const float* bboxMin;
 	const float* bboxMax;
 
@@ -98,7 +98,7 @@ ParticlesDataMutable* readRPC(const char* filename, const bool headersOnly, std:
 
 	// PARTIO TYPES
 	//ParticleAttributeType {NONE=0,VECTOR=1,FLOAT=2,INT=3,INDEXEDSTR=4};
-	for (uint chan = 0; chan < header.numChannels; chan++)
+	for (uint32_t chan = 0; chan < header.numChannels; chan++)
 	{
 		const RPCFile::ChannelInfo* chanInfo;
 		chanInfo = reader.GetChannelInfo(chan);
@@ -184,7 +184,7 @@ ParticlesDataMutable* readRPC(const char* filename, const bool headersOnly, std:
 	{
 		for(int partIndex = 0; partIndex < partData->numParticles(); partIndex++)
         {
-			for (uint chan = 0; chan < header.numChannels; chan++)
+			for (uint32_t chan = 0; chan < header.numChannels; chan++)
 			{
 				int chanType = chanInfoVec[chan]->GetDataType();
 
@@ -244,7 +244,7 @@ ParticlesDataMutable* readRPC(const char* filename, const bool headersOnly, std:
 			}
 		}
 	}
-	for (uint chan = 0; chan < header.numChannels; chan++)
+	for (uint32_t chan = 0; chan < header.numChannels; chan++)
 	{
 		int chanType = chanInfoVec[chan]->GetDataType();
 
