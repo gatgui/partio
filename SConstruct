@@ -157,8 +157,8 @@ if swig:
 if build_maya:
    maya_prefix = "maya/" + maya.Version(nice=True)
    # Use regex from gto on windows
-   mayadefs = []
-   mayaincdirs = []
+   mayadefs = ["GLEW_STATIC"]
+   mayaincdirs = ["src/ext/glew-2.0.0/include"]
    mayacppflags = ""
    if sys.platform == "win32":
       mayadefs.append("REGEX_STATIC")
@@ -173,8 +173,8 @@ if build_maya:
                 "defs": mayadefs,
                 "cppflags": mayacppflags,
                 "incdirs": mayaincdirs,
-                "srcs": excons.glob("contrib/partio4Maya/*.cpp"),
-                "custom": [maya.Require, RequirePartio, glew.Require, gl.Require],
+                "srcs": excons.glob("contrib/partio4Maya/*.cpp") + ["src/ext/glew-2.0.0/src/glew.c"],
+                "custom": [maya.Require, RequirePartio, gl.Require],
                 "install": {maya_prefix + "/icons": excons.glob("contrib/partio4Maya/icons/*"),
                             maya_prefix + "/scripts": excons.glob("contrib/partio4Maya/scripts/*")}})
 
