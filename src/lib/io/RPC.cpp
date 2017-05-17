@@ -90,9 +90,9 @@ ParticlesDataMutable* readRPC(const char* filename, const bool headersOnly, std:
 
 
 	ParticlesDataMutable* partData = headersOnly ? new ParticleHeaders: create();
-    partData->addParticles(header.numParticles);
+	partData->addParticles(header.numParticles);
 	std::vector<const RPCFile::ChannelInfo*> chanInfoVec;
-	int sizeArry[header.numChannels];
+	std::vector<int> sizeArry(header.numChannels);
 	std::vector<void*> dataArrays;
 	std::vector<Partio::ParticleAttribute>  partAttrVec;
 
