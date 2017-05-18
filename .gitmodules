@@ -4,3 +4,6 @@
 [submodule "excons"]
 	path = excons
 	url = git://github.com/gatgui/excons.git
+[submodule "zlib"]
+	path = zlib
+	url = git://github.com/gatgui/zlib.git

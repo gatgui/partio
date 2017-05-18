@@ -11,30 +11,58 @@ import excons.tools.maya as maya
 
 excons.InitGlobals()
 
+# Check for maya first to decide on the Visual Studio version to use on windows
+# This needs to be set before creating the environment
 build_maya = (maya.Version() != "")
 if build_maya:
    maya.SetupMscver()
 
-# SeExpr support requires C++11, this needs to be set before creating the environment
-seexpr_inc, seexpr_lib = excons.GetDirs("seexpr")
-use_seexpr = (seexpr_inc or seexpr_lib)
-excons.SetArgument("use-c++1", 1 if use_seexpr else 0)
+# Setup SeExpr
+def SeExprLibname(static):
+  return "SeExpr2"
 
+def SeExprDefines(static):
+  return (["SEEXPR_WIN32"] if sys.platform == "win32" else [])
+
+def SeExprExtra(env, static):
+  if sys.platform != "win32":
+    dl.Require(env)
+
+# Always link to static seexpr library
+excons.SetArgument("seexpr-static", 1)
+rv = excons.ExternalLibRequire(name="seexpr", libnameFunc=SeExprLibname, definesFunc=SeExprDefines, extraEnvFunc=SeExprExtra)
+RequireSeExpr = rv["require"]
+# SeExpr2 support requires C++11, this needs to be set before creating the environment
+excons.SetArgument("use-c++1", 0 if RequireSeExpr is None else 1)
+
+# Create base build environment
 env = excons.MakeBaseEnv()
 
-use_zlib = (excons.GetArgument("partio-use-zlib", 1, int) != 0)
-# Don't use zlib in GTO, doesn't seem very stable
-excons.SetArgument("gto-use-zlib", 0)
+# Setup zlib (either specify external one with with-zlib* flags or build from source)
+def ZlibLibname(static):
+   return ("z" if sys.platform != "win32" else ("zlib" if static else "zdll"))
 
+def ZlibDefines(static):
+   return ([] if static else ["ZLIB_DLL"])
 
-libdefs = []
+rv = excons.ExternalLibRequire(name="zlib", libnameFunc=ZlibLibname, definesFunc=ZlibDefines)
+if rv["require"] is None:
+   # When build from source, always use static version of the library
+   excons.PrintOnce("Build zlib from sources ...")
+   excons.Call("zlib", imp=["RequireZlib"])
+   def ZlibRequire(env):
+      RequireZlib(env, static=True)
+else:
+   ZlibRequire = rv["require"]
 
 cmndefs = []
 cmncppflags = ""
 cmnincdirs = []
 cmnlibdirs = []
 cmnlibs = []
-cmncusts = []
+cmncusts = [ZlibRequire]
+libdefs = ["PARTIO_USE_ZLIB"]
+swig_opts = ""
 
 if sys.platform == "win32":
    cmndefs.extend(["PARTIO_WIN32", "_CRT_NONSTDC_NO_DEPRECATE"])
@@ -43,26 +71,14 @@ if sys.platform == "win32":
 else:
    cmncppflags += " -Wno-unused-parameter"
 
-if use_zlib:
-   cmncusts.append(zlib.Require)
-   libdefs.append("PARTIO_USE_ZLIB")
-
-swig_opts = ""
-
-if use_seexpr:
+if RequireSeExpr:
    cmndefs.append("PARTIO_USE_SEEXPR")
+   cmncusts.append(RequireSeExpr)
    swig_opts = "-DPARTIO_USE_SEEXPR"
-   if seexpr_inc:
-      cmnincdirs.append(seexpr_inc)
-   if seexpr_lib:
-      cmnlibdirs.append(seexpr_lib)
-   cmnlibs.append("SeExpr2")
-   if sys.platform == "win32":
-      cmndefs.append("SEEXPR_WIN32")
-   else:
-      cmncusts.append(dl.Require)
 
-
+# Setup Gto
+#   Don't use zlib in GTO, doesn't seem very stable
+excons.SetArgument("gto-use-zlib", 0)
 excons.Call("gto", imp=["RequireGto"])
 
 cmncusts.append(RequireGto(static=True))
@@ -102,8 +118,7 @@ prjs = [
     "incdirs": cmnincdirs,
     "srcs": excons.glob("src/lib/core/*.cpp") +
             excons.glob("src/lib/io/*.cpp") +
-            # RPC requires zlib
-            (excons.glob("src/lib/io/3rdParty/nextLimit/*.cpp") if use_zlib else []) +
+            excons.glob("src/lib/io/3rdParty/nextLimit/*.cpp") +
             excons.glob("src/lib/*.cpp"),
     "custom": cmncusts
    },

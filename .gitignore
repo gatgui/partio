@@ -68,3 +68,4 @@ env.*
 /circle.*
 /testse.gto
 /partio.env.tmp
+*.cmake.*
