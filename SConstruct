@@ -72,9 +72,9 @@ else:
    cmncppflags += " -Wno-unused-parameter"
 
 if RequireSeExpr:
-   cmndefs.append("PARTIO_USE_SEEXPR")
+   cmndefs.append("PARTIO_SE_ENABLED")
    cmncusts.append(RequireSeExpr)
-   swig_opts = "-DPARTIO_USE_SEEXPR"
+   swig_opts = "-DPARTIO_SE_ENABLED"
 
 # Setup Gto
 #   Don't use zlib in GTO, doesn't seem very stable
