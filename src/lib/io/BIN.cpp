@@ -93,7 +93,7 @@ typedef struct{
 
 ParticlesDataMutable* readBIN(const char* filename, const bool headersOnly,std::ostream* errorStream){
 
-    auto_ptr<istream> input(new ifstream(filename,ios::in|ios::binary));
+    unique_ptr<istream> input(new ifstream(filename,ios::in|ios::binary));
 
     if(!*input){
         if(errorStream) *errorStream << "Partio: Unable to open file " << filename << endl;
@@ -280,7 +280,7 @@ ParticlesDataMutable* readBIN(const char* filename, const bool headersOnly,std::
 bool writeBIN(const char* filename,const ParticlesData& p,const bool /*compressed*/,std::ostream* errorStream)
 {
 
-    auto_ptr<ostream> output(
+    unique_ptr<ostream> output(
     new ofstream(filename,ios::out|ios::binary));
 
     if (!*output) {

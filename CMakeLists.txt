@@ -36,8 +36,9 @@ CMAKE_MINIMUM_REQUIRED( VERSION 2.4.6 )
 MARK_AS_ADVANCED(CMAKE_BACKWARDS_COMPATIBILITY)
 ## allow more human readable "if then else" constructs
 SET( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
-## Use verbose make file
-SET ( CMAKE_VERBOSE_MAKEFILE TRUE )
+## disable rpath when linking
+SET( CMAKE_SKIP_RPATH TRUE )
+
 
 ## project name & version
 PROJECT( partio )
@@ -47,6 +48,11 @@ SET( ${PROJECT_NAME}_PATCH_LEVEL 0 )
 
 ## CHANGE THIS TO WHERE YOU PUT THE PARTIO MAIN DIRECTORY
 SET( PARTIO_HOME ${CMAKE_SOURCE_DIR} )
+
+include(GNUInstallDirs)
+
+# PARTIO_SE_ENABLED enables SeExpr support
+option(PARTIO_SE_ENABLED "PARTIO_SE_ENABLED" false)
 
 ## Setup platform specific helper defines build variants
 IF(WIN32)
@@ -151,3 +157,20 @@ ELSE (LEGACY_BUILD_MODE)
 		ADD_SUBDIRECTORY (contrib)
 	ENDIF()
 ENDIF ()
+
+if (${PARTIO_SE_ENABLED})
+    add_definitions(-DPARTIO_SE_ENABLED=1)
+    SET(SEEXPR_BASE "c:/aselle/seexpr-inst" CACHE STRING "path to SeExpr")
+    SET(SEEXPR_INCLUDE_PATH ${SEEXPR_BASE}/include)
+    SET(SEEXPR_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+    SET(SEEXPR_LINK_PATH ${SEEXPR_BASE}/${SEEXPR_LIBDIR})
+    SET(SEEXPR_LIBS "SeExpr")
+endif ()
+
+
+## Traverse subdirectories
+ADD_SUBDIRECTORY (src/lib)
+ADD_SUBDIRECTORY (src/tools)
+ADD_SUBDIRECTORY (src/py)
+ADD_SUBDIRECTORY (src/tests)
+ADD_SUBDIRECTORY (src/doc)

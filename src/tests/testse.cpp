@@ -25,7 +25,7 @@ void usage()
 
 int main(int argc, char **argv)
 {
-#ifdef PARTIO_USE_SEEXPR
+#ifdef PARTIO_SE_ENABLED
 
     const char *inPath = 0;
     const char *expr = 0;

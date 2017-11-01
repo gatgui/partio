@@ -55,7 +55,7 @@ IF(SWIG_FOUND)
 		LINK_DIRECTORIES(${SEEXPR_LINK_PATH})
 
 		# This fails. not sure when it worked, but it gets overridden if numpy is found (CHAD)
-		#SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES SWIG_FLAGS "-includeall -module _partio")
+		#SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES SWIG_FLAGS "-includeall")
 
 		IF(NUMPY_FOUND)
 		 	INCLUDE_DIRECTORIES(${NUMPY_INCLUDE_DIRS})
@@ -64,7 +64,11 @@ IF(SWIG_FOUND)
 		ENDIF(NUMPY_FOUND)
 
 		SWIG_ADD_MODULE(partio python partio.i)
-		SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio partioSe ${SEEXPR_LIBS})
+		if (${PARTIO_SE_ENABLED})
+			SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio partioSe ${SEEXPR_LIBS})
+		else ()
+			SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio)
+		endif ()
 
 		#EXECUTE_PROCESS( COMMAND python -c "import sys;print"%s.%s"%sys.version_info[0:2]"
 		#				 OUTPUT_VARIABLE PYTHON_VERSION
