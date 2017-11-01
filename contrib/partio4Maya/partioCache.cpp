@@ -31,20 +31,19 @@ struct ArrayWriter<PT, 1, MT>
 template <typename PT, int D, typename MT>
 struct ArrayReader
 {
-   static void Read(const PT *data, MT &mayaData, int width)
+   static void Read(const PT *data, MT &mayaData, int PD)
    {
-      for (unsigned long i=0; i<mayaData.length(); ++i, data+=width)
+      int mc = std::min(PD, D);
+
+      for (unsigned long i=0; i<mayaData.length(); ++i, data+=PD)
       {
-         for (int j=0; j<D; ++j)
+         for (int j=0; j<mc; ++j)
          {
-            if (j < width)
-            {
-               mayaData[i][j] = data[j];
-            }
-            else
-            {
-               mayaData[i][j] = 0;
-            }
+            mayaData[i][j] = data[j];
+         }
+         for (int j=mc; j<D; ++j)
+         {
+            mayaData[i][j] = 0;
          }
       }
    }
@@ -53,7 +52,7 @@ struct ArrayReader
 template <typename PT, typename MT>
 struct ArrayReader<PT, 1, MT>
 {
-   static void Read(const PT *data, MT &mayaData, int width)
+   static void Read(const PT *data, MT &mayaData, int PD)
    {
       for (unsigned long i=0; i<mayaData.length(); ++i, ++data)
       {
