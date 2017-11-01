@@ -572,7 +572,9 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly, std:
          PartioGtoReader::PProp &prop = ptcomp[pi];
          
          ParticleAttributeType piot = NONE;
-         
+
+         std::string name = gr.stringFromId(prop.name());
+
          switch (prop.type())
          {
          case Gto::Float:
@@ -580,7 +582,7 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly, std:
             if (prop.width() == 3)
             {
                std::string interp = gr.stringFromId(prop.interpretation());
-               if (interp == "point" || interp == "vector")
+               if (interp == "point" || interp == "vector" || name == "position")
                {
                   piot = VECTOR;
                }
@@ -597,8 +599,6 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly, std:
          
          if (piot != NONE)
          {
-            std::string name = gr.stringFromId(prop.name());
-            
             ParticleAttribute hattr = particles->addAttribute(name.c_str(), piot, prop.width());
             if (!headersOnly)
             {
