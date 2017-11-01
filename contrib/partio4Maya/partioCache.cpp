@@ -31,13 +31,20 @@ struct ArrayWriter<PT, 1, MT>
 template <typename PT, int D, typename MT>
 struct ArrayReader
 {
-   static void Read(const PT *data, MT &mayaData)
+   static void Read(const PT *data, MT &mayaData, int width)
    {
-      for (unsigned long i=0; i<mayaData.length(); ++i, data+=D)
+      for (unsigned long i=0; i<mayaData.length(); ++i, data+=width)
       {
          for (int j=0; j<D; ++j)
          {
-            mayaData[i][j] = data[j];
+            if (j < width)
+            {
+               mayaData[i][j] = data[j];
+            }
+            else
+            {
+               mayaData[i][j] = 0;
+            }
          }
       }
    }
@@ -46,7 +53,7 @@ struct ArrayReader
 template <typename PT, typename MT>
 struct ArrayReader<PT, 1, MT>
 {
-   static void Read(const PT *data, MT &mayaData)
+   static void Read(const PT *data, MT &mayaData, int width)
    {
       for (unsigned long i=0; i<mayaData.length(); ++i, ++data)
       {
@@ -102,7 +109,7 @@ struct ArrayAccessor
 
       mayaData.setLength(partData->numParticles());
 
-      ArrayReader<PIOType, D, MT>::Read(data, mayaData);
+      ArrayReader<PIOType, D, MT>::Read(data, mayaData, pattr.count);
 
       return MStatus::kSuccess;
    }
@@ -872,7 +879,14 @@ MStatus PartioCache::readDescription(MCacheFormatDescription &desc, const MStrin
             mChannels.insert(pattr.name);
             break;
          case Partio::FLOAT:
-            desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kIrregular, srate, start, end);
+            if (pattr.count == 1)
+            {
+               desc.addChannel(name, name, MCacheFormatDescription::kDoubleArray, MCacheFormatDescription::kIrregular, srate, start, end);
+            }
+            else
+            {
+               desc.addChannel(name, name, MCacheFormatDescription::kDoubleVectorArray, MCacheFormatDescription::kIrregular, srate, start, end);
+            }
             mChannels.insert(pattr.name);
             break;
          case Partio::VECTOR:
