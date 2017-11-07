@@ -342,7 +342,7 @@ MStatus PartioImport::doIt(const MArgList& Args)
     if (makeParticle)
     {
         MStringArray foo;
-        MGlobal::executeCommand("nParticle -n partioImport", foo);
+        MGlobal::executeCommand("nParticle", foo);
         particleShape = foo[1];
     }
 
