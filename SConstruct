@@ -8,6 +8,7 @@ import excons.tools.zlib as zlib
 import excons.tools.python as python
 import excons.tools.glew as glew
 import excons.tools.maya as maya
+import excons.tools.llvm as llvm
 
 excons.InitGlobals()
 
@@ -27,13 +28,16 @@ def SeExprDefines(static):
 def SeExprExtra(env, static):
   if sys.platform != "win32":
     dl.Require(env)
+  if excons.GetArgument("seexpr-use-llvm", 0, int):
+    RequireLLVM = llvm.Require(min_version=(3, 8), require_rtti=True, require_exceptions=False)
+    RequireLLVM(env)
 
 # Always link to static seexpr library
 excons.SetArgument("seexpr-static", 1)
 rv = excons.ExternalLibRequire(name="seexpr", libnameFunc=SeExprLibname, definesFunc=SeExprDefines, extraEnvFunc=SeExprExtra)
 RequireSeExpr = rv["require"]
 # SeExpr2 support requires C++11, this needs to be set before creating the environment
-excons.SetArgument("use-c++1", 0 if RequireSeExpr is None else 1)
+excons.SetArgument("use-c++11", 0 if RequireSeExpr is None else 1)
 
 # Create base build environment
 env = excons.MakeBaseEnv()
