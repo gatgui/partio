@@ -301,12 +301,14 @@ private:
    IndexMap mObjIndices;
    PObjDQ mObjs;
    ParticlesDataMutable *mParticles;
+   int *mTmpIntData;
    
 public:
    
    PartioGtoReader(ParticlesDataMutable *particles, bool header=false)
       : Gto::Reader(header ? Gto::Reader::HeaderOnly : Gto::Reader::RandomAccess)
       , mParticles(particles)
+      , mTmpIntData(0)
    {
    }
    
@@ -396,6 +398,11 @@ public:
          case Gto::Float:
             return mParticles->dataWrite<float>(attr, 0);
          case Gto::Int:
+            if (name == "id")
+            {
+               mTmpIntData = new int[header.size * header.width];
+               return mTmpIntData;
+            }
          case Gto::String:
             return mParticles->dataWrite<int>(attr, 0);
          default:
@@ -407,7 +414,28 @@ public:
    
    virtual void dataRead(const Gto::Reader::PropertyInfo& header)
    {
-      if (header.type == Gto::String)
+      if (header.type == Gto::Int)
+      {
+         std::string name = stringFromId(header.name);
+         if (name == "id" && mTmpIntData)
+         {
+            ParticleAttribute attr;
+            if (mParticles->attributeInfo(name.c_str(), attr))
+            {
+               float *ids = mParticles->dataWrite<float>(attr, 0);
+               for (size_t i=0, k=0; i<header.size; ++i)
+               {
+                  for (size_t j=0; j<header.width; ++j, ++k)
+                  {
+                     ids[k] = float(mTmpIntData[k]);
+                  }
+               }
+            }
+            delete[] mTmpIntData;
+            mTmpIntData = 0;
+         }
+      }
+      else if (header.type == Gto::String)
       {
          std::string name = stringFromId(header.name);
          ParticleAttribute attr;
@@ -507,6 +535,11 @@ public:
    {
       mObjIndices.clear();
       mObjs.clear();
+      if (mTmpIntData)
+      {
+         delete[] mTmpIntData;
+         mTmpIntData = 0;
+      }
    }
    
 protected: 
@@ -589,7 +622,15 @@ ParticlesDataMutable* readGTO(const char *filename, const bool headersOnly, std:
             }
             break;
          case Gto::Int:
-            piot = INT;
+            if (name == "id")
+            {
+               // Forcing 'FLOAT' for particle ids (GTO fixes it to int, but maya cache reader wants float)
+               piot = FLOAT;
+            }
+            else
+            {
+               piot = INT;
+            }
             break;
          case Gto::String:
             piot = INDEXEDSTR;
