@@ -459,7 +459,7 @@ public:
    virtual bool open(void const *pData, size_t dataSize, const char *name)
    {
       clear();
-      return open(pData, dataSize, name);
+      return Gto::Reader::open(pData, dataSize, name);
    }
    
    virtual bool open(const char *filename)

@@ -327,13 +327,13 @@ struct JSONParser
     void numberDataNotify(){
         T val;
         read<LITEND>(state.fp,val);
-        Derived().numberData<T>(currKey,val);
+        Derived().template numberData<T>(currKey,val);
     }
 
     template<class T> void uniformArray(){
         int64 length=readLength();
         // give delegate chance to do something
-        if(!Derived().uniformArray<T>(currKey, int(length))) {
+        if(!Derived().template uniformArray<T>(currKey, int(length))) {
             uniformArrayDefaultImpl<T>(currKey, int(length));
         }
     }
