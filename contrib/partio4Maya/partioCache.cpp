@@ -1,3 +1,7 @@
+#if defined(_WIN32) && !defined(NOMINMAX)
+// When building for maya 2015, failing to define this may yield a compile error
+#define NOMINMAX
+#endif
 #include "partioCache.h"
 #include <maya/MAnimControl.h>
 
